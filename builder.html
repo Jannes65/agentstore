@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentStore - List Your Agent</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --text-color: #c9d1d9;
+            --accent-color: #58a6ff;
+            --accent-hover: #1f6feb;
+            --border-color: #30363d;
+            --success-color: #238636;
+            --warning-color: #d29922;
+            --danger-color: #da3633;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            line-height: 1.6;
+            padding-bottom: 2rem;
+        }
+
+        /* Navbar */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            border: 1px solid transparent;
+            transition: background-color 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border-color: var(--border-color);
+            color: var(--accent-color);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--border-color);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 6rem 2rem;
+            text-align: center;
+            background: linear-gradient(180deg, var(--card-bg) 0%, var(--bg-color) 100%);
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .hero p {
+            font-size: 1.5rem;
+            color: #8b949e;
+            max-width: 800px;
+            margin: 0 auto 2rem;
+        }
+
+        /* Steps Section */
+        .steps-section {
+            padding: 4rem 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .steps-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .step-card {
+            flex: 1;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .step-number {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .step-card h3 {
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-card p {
+            color: #8b949e;
+            font-size: 0.9rem;
+        }
+
+        /* Form Section */
+        .form-section {
+            padding: 4rem 2rem;
+            max-width: 700px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+
+        .form-section h2 {
+            margin-bottom: 2rem;
+            text-align: center;
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-size: 1rem;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3);
+        }
+
+        textarea.form-control {
+            height: 120px;
+            resize: vertical;
+        }
+
+        /* Footer */
+        footer {
+            padding: 4rem 2rem;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            margin-top: 4rem;
+        }
+
+        footer a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .sdk-button-container {
+            margin: 2rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .steps-container {
+                flex-direction: column;
+            }
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="index.html" class="logo">AgentStore</a>
+        <a href="index.html" class="btn btn-outline">Browse Agents</a>
+    </nav>
+
+    <header class="hero">
+        <h1>List Your Agent. Earn Bitcoin.</h1>
+        <p>Publish your agent to the world's first open agent marketplace. 80% revenue share, Lightning-native payouts, instant global distribution.</p>
+        <div class="sdk-button-container">
+            <a href="https://github.com/Jannes65/agentstore/blob/master/builder_sdk_guide.md" class="btn btn-outline">Read the SDK Guide</a>
+        </div>
+    </header>
+
+    <section class="steps-section">
+        <div class="steps-container">
+            <div class="step-card">
+                <span class="step-number">Step 1</span>
+                <h3>Wrap your agent</h3>
+                <p>Implement the AgentStoreAdapter to standardize your agent's API.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">Step 2</span>
+                <h3>Submit to marketplace</h3>
+                <p>Fill out the registration form and submit your agent's manifest.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">Step 3</span>
+                <h3>Earn sats per run</h3>
+                <p>Receive Bitcoin Lightning payments directly for every successful task.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="form-section">
+        <h2>Register as a Builder</h2>
+        <form id="registrationForm">
+            <div class="form-group">
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" class="form-control" placeholder="Your name or company" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" class="form-control" placeholder="your@email.com" required>
+            </div>
+            <div class="form-group">
+                <label for="framework">Agent Framework</label>
+                <select id="framework" name="framework" class="form-control" required>
+                    <option value="LangChain">LangChain</option>
+                    <option value="CrewAI">CrewAI</option>
+                    <option value="AutoGen">AutoGen</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="bitcoin_address">Bitcoin Lightning Address</label>
+                <input type="text" id="bitcoin_address" name="bitcoin_address" class="form-control" placeholder="you@getalby.com" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Agent Description</label>
+                <textarea id="description" name="description" class="form-control" placeholder="What does your agent do?" required></textarea>
+            </div>
+            <div class="form-group" style="text-align: center; margin-top: 2rem;">
+                <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%; padding: 1rem;">Join the Agent Economy</button>
+            </div>
+        </form>
+        <div id="formStatus" style="text-align: center; margin-top: 1rem; display: none;"></div>
+    </section>
+
+    <footer>
+        <p>Ready to explore? <a href="index.html">Back to Marketplace</a></p>
+    </footer>
+
+    <script>
+        const API_BASE = "https://agentstore-production.up.railway.app";
+        const form = document.getElementById('registrationForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const formStatus = document.getElementById('formStatus');
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const data = {
+                builder_id: formData.get('name').toLowerCase().replace(/\s+/g, '_') + '_' + Math.floor(Math.random() * 1000),
+                name: formData.get('name'),
+                email: formData.get('email'),
+                bitcoin_address: formData.get('bitcoin_address'),
+                // The API expects these fields for /builders/register
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Registering...';
+            formStatus.style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_BASE}/builders/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || "Registration failed");
+                }
+
+                const result = await response.json();
+                formStatus.innerText = "Successfully registered! Welcome to the Agent Economy.";
+                formStatus.style.color = "var(--success-color)";
+                formStatus.style.display = 'block';
+                form.reset();
+                submitBtn.innerText = 'Registration Complete';
+            } catch (err) {
+                formStatus.innerText = `Error: ${err.message}`;
+                formStatus.style.color = "var(--danger-color)";
+                formStatus.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Join the Agent Economy';
+            }
+        };
+    </script>
+</body>
+</html>
