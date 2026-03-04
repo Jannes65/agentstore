@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentStore Marketplace</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --text-color: #c9d1d9;
+            --accent-color: #58a6ff;
+            --accent-hover: #1f6feb;
+            --border-color: #30363d;
+            --success-color: #238636;
+            --warning-color: #d29922;
+            --danger-color: #da3633;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            line-height: 1.6;
+            padding-bottom: 2rem;
+        }
+
+        /* Navbar */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        .search-container {
+            flex-grow: 1;
+            max-width: 500px;
+            margin: 0 2rem;
+        }
+
+        .search-bar {
+            width: 100%;
+            padding: 0.5rem 1rem;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            border: 1px solid transparent;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border-color: var(--border-color);
+            color: var(--accent-color);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--border-color);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 4rem 2rem;
+            text-align: center;
+            background: linear-gradient(180deg, var(--card-bg) 0%, var(--bg-color) 100%);
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: #8b949e;
+            margin-bottom: 2rem;
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        select, input[type="checkbox"] {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 0.4rem;
+            border-radius: 4px;
+        }
+
+        /* Agent Grid */
+        .agent-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .agent-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s;
+        }
+
+        .agent-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-color);
+        }
+
+        .agent-name {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .badge-category { background-color: #388bfd26; color: var(--accent-color); }
+        .badge-verified { background-color: #23863626; color: #3fb950; }
+        .badge-community { background-color: #d2992226; color: #e3b341; }
+        .badge-unverified { background-color: #f8514926; color: #f85149; }
+
+        .agent-price {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #3fb950;
+            margin: 1rem 0;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            margin: 10% auto;
+            padding: 2rem;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+        }
+
+        .close {
+            position: absolute;
+            right: 1.5rem;
+            top: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #8b949e;
+        }
+
+        .modal h2 { margin-bottom: 1.5rem; }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            resize: none;
+        }
+
+        .output-container {
+            background-color: #000;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: monospace;
+            margin-top: 1.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            border: 1px solid var(--border-color);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            font-style: italic;
+            color: #8b949e;
+        }
+
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="#" class="logo">AgentStore</a>
+        <div class="search-container">
+            <input type="text" class="search-bar" placeholder="Search agents..." id="searchInput">
+        </div>
+        <button class="btn btn-outline">Connect Wallet</button>
+    </nav>
+
+    <header class="hero">
+        <h1>The Agent Economy Starts Here</h1>
+        <p>Discover, deploy, and monetize autonomous AI agents on the universal standard.</p>
+        <button class="btn btn-primary" onclick="document.getElementById('grid').scrollIntoView({behavior: 'smooth'})">Browse Agents</button>
+    </header>
+
+    <div class="filter-bar">
+        <select id="categoryFilter">
+            <option value="">All Categories</option>
+            <option value="Productivity">Productivity</option>
+            <option value="Research">Research</option>
+            <option value="Developer Tools">Developer Tools</option>
+            <option value="Finance">Finance</option>
+            <option value="Content & Writing">Content & Writing</option>
+        </select>
+        <label>
+            <input type="checkbox" id="verifiedFilter"> Verified Only
+        </label>
+    </div>
+
+    <main class="agent-grid" id="agentGrid">
+        <div class="loading">Fetching agents from Marketplace...</div>
+    </main>
+
+    <!-- Run Agent Modal -->
+    <div id="runModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalAgentName">Run Agent</h2>
+            <p style="margin-bottom: 1rem; color: #8b949e;">Enter the task for the agent:</p>
+            <textarea id="agentInput" placeholder="e.g. Optimize my calendar for high-focus work."></textarea>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span id="modalPrice" style="font-weight: bold; color: #3fb950;"></span>
+                <button id="payAndRunBtn" class="btn btn-primary">Pay & Run</button>
+            </div>
+            <div id="outputContainer" class="output-container">
+                <div style="color: var(--accent-color); margin-bottom: 0.5rem;">[Agent Output]</div>
+                <div id="agentOutputText"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "http://localhost:8000";
+        const agentGrid = document.getElementById('agentGrid');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const verifiedFilter = document.getElementById('verifiedFilter');
+        const searchInput = document.getElementById('searchInput');
+        
+        const modal = document.getElementById('runModal');
+        const closeModal = document.querySelector('.close');
+        const payAndRunBtn = document.getElementById('payAndRunBtn');
+        const agentInput = document.getElementById('agentInput');
+        const agentOutputText = document.getElementById('agentOutputText');
+        const outputContainer = document.getElementById('outputContainer');
+
+        let allAgents = [];
+        let selectedAgentId = null;
+
+        // Fetch agents on load
+        async function fetchAgents() {
+            try {
+                const category = categoryFilter.value;
+                const verifiedOnly = verifiedFilter.checked;
+                let url = `${API_BASE}/agents?verified_only=${verifiedOnly}`;
+                if (category) url += `&category=${category}`;
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Failed to fetch agents");
+                allAgents = await response.json();
+                renderAgents(allAgents);
+            } catch (err) {
+                agentGrid.innerHTML = `<div class="loading" style="color: var(--danger-color)">Error: ${err.message}. Make sure agentstore_api.py is running.</div>`;
+            }
+        }
+
+        function renderAgents(agents) {
+            const searchTerm = searchInput.value.toLowerCase();
+            const filtered = agents.filter(a => 
+                a.agent_id.toLowerCase().includes(searchTerm) || 
+                (a.name && a.name.toLowerCase().includes(searchTerm))
+            );
+
+            if (filtered.length === 0) {
+                agentGrid.innerHTML = '<div class="loading">No agents found matching your criteria.</div>';
+                return;
+            }
+
+            agentGrid.innerHTML = filtered.map(agent => {
+                const trust = agent.trust_score;
+                let badgeClass = 'badge-unverified';
+                let badgeText = 'Unverified';
+                
+                if (trust.verified) {
+                    badgeClass = 'badge-verified';
+                    badgeText = 'Verified';
+                } else if (trust.community_rating >= 4.0) {
+                    badgeClass = 'badge-community';
+                    badgeText = 'Community Rated';
+                }
+
+                return `
+                    <div class="agent-card">
+                        <div>
+                            <div class="agent-name">${agent.agent_id}</div>
+                            <span class="badge badge-category">${agent.category}</span>
+                            <span class="badge ${badgeClass}">${badgeText}</span>
+                            <p style="font-size: 0.9rem; color: #8b949e; margin-top: 0.5rem;">
+                                Rating: ${trust.community_rating} ★ | Completion: ${Math.round(trust.task_completion_rate * 100)}%
+                            </p>
+                        </div>
+                        <div>
+                            <div class="agent-price">${agent.price_sats} SATS</div>
+                            <button class="btn btn-outline" style="width: 100%" onclick="openRunModal('${agent.agent_id}', ${agent.price_sats})">Run Agent</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openRunModal(agentId, price) {
+            selectedAgentId = agentId;
+            document.getElementById('modalAgentName').innerText = `Run ${agentId}`;
+            document.getElementById('modalPrice').innerText = `${price} SATS`;
+            agentInput.value = '';
+            agentOutputText.innerText = '';
+            outputContainer.style.display = 'none';
+            payAndRunBtn.disabled = false;
+            payAndRunBtn.innerText = 'Pay & Run';
+            modal.style.display = 'block';
+        }
+
+        // Event Listeners
+        categoryFilter.addEventListener('change', fetchAgents);
+        verifiedFilter.addEventListener('change', fetchAgents);
+        searchInput.addEventListener('input', () => renderAgents(allAgents));
+
+        closeModal.onclick = () => modal.style.display = 'none';
+        window.onclick = (event) => { if (event.target == modal) modal.style.display = 'none'; }
+
+        payAndRunBtn.onclick = async () => {
+            const input = agentInput.value.trim();
+            if (!input) {
+                alert("Please enter a task.");
+                return;
+            }
+
+            payAndRunBtn.disabled = true;
+            payAndRunBtn.innerText = 'Processing...';
+
+            try {
+                const response = await fetch(`${API_BASE}/agents/${selectedAgentId}/run`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ input: input })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || "Execution failed");
+                }
+
+                const result = await response.json();
+                agentOutputText.innerText = result.output;
+                outputContainer.style.display = 'block';
+                payAndRunBtn.innerText = 'Success!';
+            } catch (err) {
+                alert(`Error: ${err.message}`);
+                payAndRunBtn.disabled = false;
+                payAndRunBtn.innerText = 'Pay & Run';
+            }
+        };
+
+        // Initial fetch
+        fetchAgents();
+    </script>
+</body>
+</html>

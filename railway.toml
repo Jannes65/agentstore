@@ -1,0 +1,6 @@
+[build]
+builder = "DOCKERFILE"
+
+[deploy]
+start_command = "python agentstore_api.py"
+healthcheck_path = "/agents"
