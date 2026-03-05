@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 import uvicorn
+import os
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -173,6 +174,22 @@ async def join_waitlist(entry: WaitlistEntry, db: Session = Depends(get_db)):
         return {"message": "Joined waitlist successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail="Email already exists or invalid data")
+
+@app.post("/chat")
+async def chat(request: dict):
+    import httpx
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": os.environ.get("ANTHROPIC_API_KEY"),
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json"
+            },
+            json=request,
+            timeout=30.0
+        )
+        return response.json()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
