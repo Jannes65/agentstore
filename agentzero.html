@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentZero - Your AI Guide to AgentStore</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Syne:wght@400..800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --card-bg: #161b22;
+            --text-color: #c9d1d9;
+            --accent-color: #f7931a;
+            --accent-hover: #e88200;
+            --border-color: #30363d;
+            --success-color: #238636;
+            --warning-color: #d29922;
+            --danger-color: #da3633;
+            --font-family: 'DM Sans', sans-serif;
+            --heading-font: 'Syne', sans-serif;
+            --user-msg-bg: #f7931a;
+            --agent-msg-bg: #30363d;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        h1, h2, h3, .logo {
+            font-family: var(--heading-font);
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        .hero {
+            padding: 4rem 2rem 2rem;
+            text-align: center;
+            background: linear-gradient(180deg, #111 0%, var(--bg-color) 100%);
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            max-width: 600px;
+            margin: 0 auto;
+            color: #8b949e;
+        }
+
+        .chat-container {
+            flex-grow: 1;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto 2rem;
+            display: flex;
+            flex-direction: column;
+            padding: 0 1rem;
+        }
+
+        #chat-history {
+            flex-grow: 1;
+            background-color: #0d1117;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            overflow-y: auto;
+            max-height: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            font-size: 1rem;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: var(--user-msg-bg);
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .agent-message {
+            align-self: flex-start;
+            background-color: var(--agent-msg-bg);
+            color: var(--text-color);
+            border-bottom-left-radius: 2px;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            padding: 0.75rem 1rem;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-color);
+            font-family: inherit;
+        }
+
+        #user-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            border: none;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-primary:disabled {
+            background-color: var(--border-color);
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            font-style: italic;
+            color: #8b949e;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        /* Scrollbar styling */
+        #chat-history::-webkit-scrollbar {
+            width: 8px;
+        }
+        #chat-history::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #chat-history::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        #chat-history::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="index.html" class="logo">AgentStore</a>
+    </nav>
+
+    <header class="hero">
+        <h1>AgentZero</h1>
+        <p>Your AI guide to listing on AgentStore. Ask anything in plain English.</p>
+    </header>
+
+    <main class="chat-container">
+        <div id="chat-history">
+            <div class="message agent-message">
+                Hello! I'm AgentZero, your concierge for AgentStore. How can I help you list your AI agent today?
+            </div>
+        </div>
+        
+        <div class="loading" id="loading-indicator">AgentZero is thinking...</div>
+
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="Ask AgentZero..." autocomplete="off">
+            <button class="btn btn-primary" id="ask-btn">Ask AgentZero</button>
+        </div>
+    </main>
+
+    <script>
+        const chatHistory = document.getElementById('chat-history');
+        const userInput = document.getElementById('user-input');
+        const askBtn = document.getElementById('ask-btn');
+        const loadingIndicator = document.getElementById('loading-indicator');
+
+        const systemPrompt = "You are AgentZero, the friendly concierge for AgentStore — the world's first Bitcoin Lightning-native AI agent marketplace. You help builders list their AI agents in plain English. \n\nYou explain things simply — no jargon. When builders ask how to list their agent, walk them through: 1) describing what their agent does, 2) what permissions it needs, 3) setting a price in sats, 4) providing an endpoint URL. \n\nAlways encourage them to visit chooseyouragents.com/builder.html to register. Keep responses short and friendly.";
+
+        let messages = [];
+
+        function appendMessage(role, content) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message');
+            msgDiv.classList.add(role === 'user' ? 'user-message' : 'agent-message');
+            msgDiv.textContent = content;
+            chatHistory.appendChild(msgDiv);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        async function handleAsk() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            appendMessage('user', text);
+            userInput.value = '';
+            
+            askBtn.disabled = true;
+            loadingIndicator.style.display = 'block';
+
+            messages.push({ role: 'user', content: text });
+
+            try {
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': window.ANTHROPIC_API_KEY || '',
+                        'anthropic-version': '2023-06-01',
+                        'dangerously-allow-browser': 'true'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-3-5-sonnet-20240620', // Note: using 3.5 sonnet as requested (or closest stable)
+                        system: systemPrompt,
+                        messages: messages,
+                        max_tokens: 1024
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || 'Failed to get response');
+                }
+
+                const data = await response.json();
+                const reply = data.content[0].text;
+                
+                appendMessage('agent', reply);
+                messages.push({ role: 'assistant', content: reply });
+
+            } catch (error) {
+                console.error('Error calling Anthropic API:', error);
+                appendMessage('agent', 'Sorry, I encountered an error: ' + error.message + '. Please ensure the API key is configured correctly.');
+            } finally {
+                askBtn.disabled = false;
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        askBtn.addEventListener('click', handleAsk);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleAsk();
+        });
+    </script>
+</body>
+</html>
