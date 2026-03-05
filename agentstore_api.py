@@ -178,6 +178,7 @@ async def join_waitlist(entry: WaitlistEntry, db: Session = Depends(get_db)):
 @app.post("/chat")
 async def chat(request: dict):
     import httpx
+    import os
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "https://api.anthropic.com/v1/messages",
@@ -189,7 +190,10 @@ async def chat(request: dict):
             json=request,
             timeout=30.0
         )
-        return response.json()
+        result = response.json()
+        print(f"Anthropic response status: {response.status_code}")
+        print(f"Anthropic response: {result}")
+        return result
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
