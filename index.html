@@ -647,10 +647,12 @@
 
         function renderAgents(agents) {
             const searchTerm = searchInput.value.toLowerCase();
-            const filtered = agents.filter(a => 
-                a.agent_id.toLowerCase().includes(searchTerm) || 
-                (a.name && a.name.toLowerCase().includes(searchTerm))
-            );
+            const filtered = agents.filter(a => {
+                const name = a.name || a.agent_id || "";
+                const id = a.id || a.agent_id || "";
+                return id.toLowerCase().includes(searchTerm) || 
+                       name.toLowerCase().includes(searchTerm);
+            });
 
             if (filtered.length === 0) {
                 agentGrid.innerHTML = '<div class="loading">No agents found matching your criteria.</div>';
@@ -658,14 +660,19 @@
             }
 
             agentGrid.innerHTML = filtered.map(agent => {
-                const trust = agent.trust_score;
+                const agentId = agent.id || agent.agent_id;
+                const agentName = agent.name || agentId;
+                const verified = agent.verified || (agent.trust_score && agent.trust_score.verified);
+                const rating = agent.community_rating || (agent.trust_score && agent.trust_score.community_rating) || 0;
+                const completion = agent.task_completion_rate || (agent.trust_score && agent.trust_score.task_completion_rate) || 0;
+
                 let badgeClass = 'badge-unverified';
                 let badgeText = 'Unverified';
                 
-                if (trust.verified) {
+                if (verified) {
                     badgeClass = 'badge-verified';
                     badgeText = 'Verified';
-                } else if (trust.community_rating >= 4.0) {
+                } else if (rating >= 4.0) {
                     badgeClass = 'badge-community';
                     badgeText = 'Community Rated';
                 }
@@ -673,16 +680,16 @@
                 return `
                     <div class="agent-card">
                         <div>
-                            <div class="agent-name">${agent.agent_id}</div>
+                            <div class="agent-name">${agentName}</div>
                             <span class="badge badge-category">${agent.category}</span>
                             <span class="badge ${badgeClass}">${badgeText}</span>
                             <p style="font-size: 0.9rem; color: #8b949e; margin-top: 0.5rem;">
-                                Rating: ${trust.community_rating} ★ | Completion: ${Math.round(trust.task_completion_rate * 100)}%
+                                Rating: ${rating} ★ | Completion: ${Math.round(completion * 100)}%
                             </p>
                         </div>
                         <div>
                             <div class="agent-price">${agent.price_sats} SATS</div>
-                            <button class="btn btn-outline" style="width: 100%" onclick="openRunModal('${agent.agent_id}', ${agent.price_sats})">Run Agent</button>
+                            <button class="btn btn-outline" style="width: 100%" onclick="openRunModal('${agentId}', ${agent.price_sats})">Run Agent</button>
                         </div>
                     </div>
                 `;
