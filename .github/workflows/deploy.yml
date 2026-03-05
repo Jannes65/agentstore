@@ -15,7 +15,7 @@ jobs:
 
       - name: Deploy HTML files
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           wrangler pages deploy . --project-name=twilight-hill-0366 --branch=master
