@@ -366,6 +366,26 @@
         .badge-community { background-color: #d2992226; color: #e3b341; }
         .badge-unverified { background-color: #f8514926; color: #f85149; }
 
+        .permissions-list {
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .permission-item {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .permission-icon {
+            font-size: 1.1rem;
+        }
+
+        .icon-allowed { color: #3fb950; }
+        .icon-denied { color: #f85149; }
+
         .agent-price {
             font-size: 1.1rem;
             font-weight: bold;
@@ -562,15 +582,39 @@
 
     <!-- Run Agent Modal -->
     <div id="runModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2 id="modalAgentName">Run Agent</h2>
-            <p style="margin-bottom: 1rem; color: #8b949e;">Enter the task for the agent:</p>
-            <textarea id="agentInput" placeholder="e.g. Optimize my calendar for high-focus work."></textarea>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span id="modalPrice" style="font-weight: bold; color: #3fb950;"></span>
-                <button id="payAndRunBtn" class="btn btn-primary">Pay & Run</button>
+        <div class="modal-content" style="max-width: 700px;">
+            <span class="close" id="closeModal">&times;</span>
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                <h2 id="modalAgentName" style="margin-bottom: 0;">Run Agent</h2>
+                <span id="modalBadgeCategory" class="badge badge-category">Category</span>
             </div>
+            
+            <div id="modalDescription" style="color: #8b949e; margin-bottom: 1.5rem; line-height: 1.5;">
+                Detailed agent description goes here...
+            </div>
+
+            <div class="permissions-list" id="modalPermissions">
+                <!-- Permissions with icons will be injected here -->
+            </div>
+
+            <div style="background: rgba(247, 147, 26, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(247, 147, 26, 0.2); margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                    <span style="font-weight: bold; color: white;">Pricing:</span>
+                    <span id="modalPrice" style="font-weight: bold; color: #3fb950; font-size: 1.2rem;"></span>
+                </div>
+                <div style="font-size: 0.85rem; color: #8b949e;">* 80% goes directly to the builder</div>
+            </div>
+
+            <div style="margin-bottom: 1rem; font-weight: bold; color: white;">Task Input:</div>
+            <textarea id="agentInput" placeholder="Describe your task..."></textarea>
+            
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <button id="connectWalletToRunBtn" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Connect Wallet to Run</button>
+                <div id="comingSoonMessage" style="text-align: center; color: var(--accent-color); font-weight: bold; display: none;">
+                    Lightning wallet integration coming soon. Join the waitlist to be notified.
+                </div>
+            </div>
+            
             <div id="outputContainer" class="output-container">
                 <div style="color: var(--accent-color); margin-bottom: 0.5rem;">[Agent Output]</div>
                 <div id="agentOutputText"></div>
@@ -586,8 +630,9 @@
         const searchInput = document.getElementById('searchInput');
         
         const modal = document.getElementById('runModal');
-        const closeModal = document.querySelector('.close');
-        const payAndRunBtn = document.getElementById('payAndRunBtn');
+        const closeModal = document.getElementById('closeModal');
+        const connectWalletToRunBtn = document.getElementById('connectWalletToRunBtn');
+        const comingSoonMessage = document.getElementById('comingSoonMessage');
         const agentInput = document.getElementById('agentInput');
         const agentOutputText = document.getElementById('agentOutputText');
         const outputContainer = document.getElementById('outputContainer');
@@ -689,22 +734,51 @@
                         </div>
                         <div>
                             <div class="agent-price">${agent.price_sats} SATS</div>
-                            <button class="btn btn-outline" style="width: 100%" onclick="openRunModal('${agentId}', ${agent.price_sats})">Run Agent</button>
+                            <button class="btn btn-outline" style="width: 100%" onclick="openRunModal('${agentId}')">Run Agent</button>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        function openRunModal(agentId, price) {
+        function openRunModal(agentId) {
+            const agent = allAgents.find(a => (a.id || a.agent_id) === agentId);
+            if (!agent) return;
+
             selectedAgentId = agentId;
-            document.getElementById('modalAgentName').innerText = `Run ${agentId}`;
-            document.getElementById('modalPrice').innerText = `${price} SATS`;
+            document.getElementById('modalAgentName').innerText = agent.name || agentId;
+            document.getElementById('modalBadgeCategory').innerText = agent.category;
+            document.getElementById('modalDescription').innerText = agent.description_long || agent.description_short || "No description provided.";
+            document.getElementById('modalPrice').innerText = `${agent.price_sats} SATS`;
+            
+            // Build Permissions Section
+            const perms = agent.permissions || {};
+            // Support both old and new field names
+            const canRead = perms.can_read_files || perms.read_files;
+            const canWrite = perms.can_write_files || perms.write_files;
+            const canExternal = perms.can_make_external_calls || perms.external_calls;
+
+            const modalPermissions = document.getElementById('modalPermissions');
+            modalPermissions.innerHTML = `
+                <div class="permission-item">
+                    <span class="permission-icon ${canRead ? 'icon-allowed' : 'icon-denied'}">${canRead ? '✓' : '✗'}</span>
+                    <span>Access & Read Local Files</span>
+                </div>
+                <div class="permission-item">
+                    <span class="permission-icon ${canWrite ? 'icon-allowed' : 'icon-denied'}">${canWrite ? '✓' : '✗'}</span>
+                    <span>Write & Modify Local Files</span>
+                </div>
+                <div class="permission-item">
+                    <span class="permission-icon ${canExternal ? 'icon-allowed' : 'icon-denied'}">${canExternal ? '✓' : '✗'}</span>
+                    <span>Make External API Calls</span>
+                </div>
+            `;
+
             agentInput.value = '';
             agentOutputText.innerText = '';
             outputContainer.style.display = 'none';
-            payAndRunBtn.disabled = false;
-            payAndRunBtn.innerText = 'Pay & Run';
+            comingSoonMessage.style.display = 'none';
+            connectWalletToRunBtn.style.display = 'block';
             modal.style.display = 'block';
         }
 
@@ -716,37 +790,9 @@
         closeModal.onclick = () => modal.style.display = 'none';
         window.onclick = (event) => { if (event.target == modal) modal.style.display = 'none'; }
 
-        payAndRunBtn.onclick = async () => {
-            const input = agentInput.value.trim();
-            if (!input) {
-                alert("Please enter a task.");
-                return;
-            }
-
-            payAndRunBtn.disabled = true;
-            payAndRunBtn.innerText = 'Processing...';
-
-            try {
-                const response = await fetch(`${API_BASE}/agents/${selectedAgentId}/run`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ input: input })
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || "Execution failed");
-                }
-
-                const result = await response.json();
-                agentOutputText.innerText = result.output;
-                outputContainer.style.display = 'block';
-                payAndRunBtn.innerText = 'Success!';
-            } catch (err) {
-                alert(`Error: ${err.message}`);
-                payAndRunBtn.disabled = false;
-                payAndRunBtn.innerText = 'Pay & Run';
-            }
+        connectWalletToRunBtn.onclick = () => {
+            comingSoonMessage.style.display = 'block';
+            connectWalletToRunBtn.style.display = 'none';
         };
 
         // Initial fetch
