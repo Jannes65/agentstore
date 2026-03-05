@@ -6,16 +6,17 @@
     <title>AgentStore - List Your Agent</title>
     <style>
         :root {
-            --bg-color: #0d1117;
+            --bg-color: #0a0a0a;
             --card-bg: #161b22;
             --text-color: #c9d1d9;
-            --accent-color: #58a6ff;
-            --accent-hover: #1f6feb;
+            --accent-color: #f7931a;
+            --accent-hover: #e88200;
             --border-color: #30363d;
             --success-color: #238636;
             --warning-color: #d29922;
             --danger-color: #da3633;
-            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            --font-family: 'DM Sans', sans-serif;
+            --heading-font: 'Syne', sans-serif;
         }
 
         * {
@@ -30,6 +31,10 @@
             font-family: var(--font-family);
             line-height: 1.6;
             padding-bottom: 2rem;
+        }
+
+        h1, h2, h3, .logo {
+            font-family: var(--heading-font);
         }
 
         /* Navbar */
@@ -102,6 +107,66 @@
             color: #8b949e;
             max-width: 800px;
             margin: 0 auto 2rem;
+        }
+
+        /* Waitlist Form */
+        .waitlist-section {
+            padding: 4rem 2rem;
+            background-color: #111;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .waitlist-section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+
+        .waitlist-section p {
+            color: #8b949e;
+            margin-bottom: 2rem;
+        }
+
+        .waitlist-form {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            max-width: 800px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+
+        .waitlist-input {
+            padding: 0.8rem 1rem;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            min-width: 250px;
+            flex-grow: 1;
+        }
+
+        .waitlist-submit {
+            padding: 0.8rem 2rem;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: var(--font-family);
+        }
+
+        .waitlist-submit:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .waitlist-message {
+            margin-top: 1rem;
+            font-weight: 600;
         }
 
         /* Steps Section */
@@ -260,6 +325,17 @@
         </div>
     </section>
 
+    <section class="waitlist-section" id="waitlist">
+        <h2>Be a Founding Builder. Get Listed First.</h2>
+        <p>Get early access when real agents go live. No spam.</p>
+        <form class="waitlist-form" id="waitlistForm">
+            <input type="text" id="waitlistName" class="waitlist-input" placeholder="Your Name" required>
+            <input type="email" id="waitlistEmail" class="waitlist-input" placeholder="Your Email" required>
+            <button type="submit" class="waitlist-submit">Join Waitlist</button>
+        </form>
+        <div id="waitlistMessage" class="waitlist-message"></div>
+    </section>
+
     <section class="form-section">
         <h2>Register as a Builder</h2>
         <form id="registrationForm">
@@ -301,6 +377,40 @@
 
     <script>
         const API_BASE = "https://agentstore-production.up.railway.app";
+
+        // Waitlist Form Handling
+        const waitlistForm = document.getElementById('waitlistForm');
+        const waitlistMessage = document.getElementById('waitlistMessage');
+
+        if (waitlistForm) {
+            waitlistForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('waitlistName').value;
+                const email = document.getElementById('waitlistEmail').value;
+                waitlistMessage.textContent = "Submitting...";
+                waitlistMessage.style.color = "var(--text-color)";
+
+                try {
+                    const response = await fetch(`${API_BASE}/waitlist`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, email })
+                    });
+
+                    if (response.ok) {
+                        waitlistMessage.textContent = "You're on the list. We'll be in touch.";
+                        waitlistMessage.style.color = "var(--accent-color)";
+                        waitlistForm.reset();
+                    } else {
+                        throw new Error("Failed to join waitlist");
+                    }
+                } catch (err) {
+                    waitlistMessage.textContent = "Error: " + err.message;
+                    waitlistMessage.style.color = "var(--danger-color)";
+                }
+            });
+        }
+
         const form = document.getElementById('registrationForm');
         const submitBtn = document.getElementById('submitBtn');
         const formStatus = document.getElementById('formStatus');
