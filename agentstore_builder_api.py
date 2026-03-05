@@ -1,11 +1,13 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Dict, List, Optional
+from sqlalchemy.orm import Session
 from agentstore_api import app, marketplace
 from agentstore_schema import Category
 from agentstore_adapter import LangChainAdapter, CrewAIAdapter, AutoGenAdapter, AgentStoreAdapter
 from agentstore_marketplace import Listing
 from agentstore_trust import PermissionScope, TrustScore
+from agentstore_database import get_db, save_builder, get_builder as get_builder_db, save_agent, delete_agent_db
 
 # Storage for builders
 builders: Dict[str, dict] = {}
@@ -29,106 +31,86 @@ class AgentSubmission(BaseModel):
     framework: str
 
 @app.post("/builders/register")
-async def register_builder(builder: BuilderRegistration):
+async def register_builder(builder: BuilderRegistration, db: Session = Depends(get_db)):
     """Registers a new builder profile."""
-    if builder.builder_id in builders:
+    if get_builder_db(db, builder.builder_id):
         raise HTTPException(status_code=400, detail="Builder ID already exists")
-    builders[builder.builder_id] = {
-        "builder_id": builder.builder_id,
-        "name": builder.name,
-        "email": builder.email,
-        "bitcoin_address": builder.bitcoin_address,
-        "agents": []
-    }
+    
+    builder_data = builder.model_dump()
+    save_builder(db, builder_data)
     return {"message": "Builder registered successfully", "builder_id": builder.builder_id}
 
 @app.post("/agents/submit")
-async def submit_agent(submission: AgentSubmission):
+async def submit_agent(submission: AgentSubmission, db: Session = Depends(get_db)):
     """Submits a new agent to the marketplace."""
-    if submission.builder_id not in builders:
+    from agentstore_database import get_agent
+    if not get_builder_db(db, submission.builder_id):
         raise HTTPException(status_code=404, detail="Builder not found. Please register first.")
     
-    if submission.agent_id in marketplace.listings:
+    if get_agent(db, submission.agent_id):
         raise HTTPException(status_code=400, detail="Agent ID already exists")
 
-    # Map framework to stub adapter
-    framework_map = {
-        "langchain": LangChainAdapter(),
-        "crewai": CrewAIAdapter(),
-        "autogen": AutoGenAdapter()
+    agent_data = {
+        "id": submission.agent_id,
+        "builder_id": submission.builder_id,
+        "name": submission.name,
+        "description_short": submission.description_short,
+        "description_long": submission.description_long,
+        "category": submission.category,
+        "price_sats": submission.price_sats,
+        "endpoint_url": submission.endpoint_url,
+        "permissions": submission.permissions,
+        "framework": submission.framework,
+        "verified": False,
+        "community_rating": 0.0,
+        "task_completion_rate": 0.0
     }
-    adapter = framework_map.get(submission.framework.lower())
-    if not adapter:
-        # Default to LangChain if unknown, but normally would raise error
-        adapter = LangChainAdapter()
 
-    # Parse permissions
-    scope = PermissionScope(
-        can_read_files=submission.permissions.get("can_read_files", False),
-        can_write_files=submission.permissions.get("can_write_files", False),
-        can_make_external_calls=submission.permissions.get("can_make_external_calls", False),
-        can_access_env_vars=submission.permissions.get("can_access_env_vars", False)
-    )
-
-    # Initial trust score
-    trust = TrustScore(
-        agent_id=submission.agent_id,
-        verified=False,
-        community_rating=0.0,
-        task_completion_rate=0.0
-    )
-
-    # Map category string to Category enum
-    try:
-        cat = Category(submission.category)
-    except ValueError:
-        cat = Category.OTHER
-
-    listing = Listing(
-        agent_id=submission.agent_id,
-        adapter=adapter,
-        scope=scope,
-        trust_score=trust,
-        price_sats=submission.price_sats,
-        category=cat
-    )
-
-    marketplace.publish(listing)
-    builders[submission.builder_id]["agents"].append(submission.agent_id)
+    save_agent(db, agent_data)
     
     return {"message": "Agent submitted successfully", "agent_id": submission.agent_id}
 
 @app.get("/builders/{builder_id}")
-async def get_builder(builder_id: str):
+async def get_builder(builder_id: str, db: Session = Depends(get_db)):
     """Returns builder profile and their listed agents."""
-    builder = builders.get(builder_id)
+    builder = get_builder_db(db, builder_id)
     if not builder:
         raise HTTPException(status_code=404, detail="Builder not found")
     
-    agent_details = []
-    for agent_id in builder["agents"]:
-        listing = marketplace.listings.get(agent_id)
-        if listing:
-            agent_details.append(listing.model_dump(exclude={'adapter'}))
-            
     return {
-        "profile": {k: v for k, v in builder.items() if k != "agents"},
-        "agents": agent_details
+        "profile": {
+            "builder_id": builder.id,
+            "name": builder.name,
+            "email": builder.email,
+            "bitcoin_address": builder.bitcoin_address,
+            "created_at": builder.created_at
+        },
+        "agents": [
+            {
+                "id": agent.id,
+                "name": agent.name,
+                "description_short": agent.description_short,
+                "category": agent.category,
+                "price_sats": agent.price_sats,
+                "verified": agent.verified,
+                "community_rating": agent.community_rating
+            } for agent in builder.agents
+        ]
     }
 
 @app.delete("/agents/{agent_id}")
-async def delete_agent(agent_id: str, builder_id: str):
+async def delete_agent(agent_id: str, builder_id: str, db: Session = Depends(get_db)):
     """Builder can delist their agent."""
-    if builder_id not in builders:
+    from agentstore_database import get_agent
+    builder = get_builder_db(db, builder_id)
+    if not builder:
         raise HTTPException(status_code=404, detail="Builder not found")
     
-    if agent_id not in builders[builder_id]["agents"]:
+    agent = get_agent(db, agent_id)
+    if not agent or agent.builder_id != builder_id:
         raise HTTPException(status_code=403, detail="Agent does not belong to this builder or not found")
 
-    if agent_id in marketplace.listings:
-        del marketplace.listings[agent_id]
-    
-    builders[builder_id]["agents"].remove(agent_id)
+    delete_agent_db(db, agent_id)
     return {"message": "Agent delisted successfully"}
 
 if __name__ == "__main__":
