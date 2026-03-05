@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Your Agent - AgentStore</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Syne:wght@400..800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --card-bg: #161b22;
+            --text-color: #c9d1d9;
+            --accent-color: #f7931a;
+            --accent-hover: #e88200;
+            --border-color: #30363d;
+            --success-color: #238636;
+            --warning-color: #d29922;
+            --danger-color: #da3633;
+            --font-family: 'DM Sans', sans-serif;
+            --heading-font: 'Syne', sans-serif;
+            --bitcoin-orange: #f7931a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            line-height: 1.6;
+            padding-bottom: 4rem;
+        }
+
+        h1, h2, h3, .logo {
+            font-family: var(--heading-font);
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 4rem auto;
+            padding: 2rem;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+
+        h1 {
+            margin-bottom: 1.5rem;
+            color: var(--accent-color);
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-family: inherit;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: white;
+            width: 100%;
+            font-size: 1.1rem;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border-color: var(--border-color);
+            color: var(--accent-color);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--border-color);
+        }
+
+        #successMessage {
+            display: none;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background-color: rgba(247, 147, 26, 0.1);
+            border: 1px solid var(--bitcoin-orange);
+            border-radius: 8px;
+            color: var(--bitcoin-orange);
+            text-align: center;
+            font-weight: bold;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        footer a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="index.html" class="logo">AgentStore</a>
+        <div>
+            <a href="builder.html" class="btn btn-outline">Builder Portal</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Submit Your Agent</h1>
+        <form id="submitForm">
+            <div class="form-group">
+                <label for="name">Agent Name</label>
+                <input type="text" id="name" name="name" class="form-control" placeholder="e.g. Market Researcher Pro" required>
+            </div>
+
+            <div class="form-group">
+                <label for="description_short">Short Description</label>
+                <input type="text" id="description_short" name="description_short" class="form-control" placeholder="Brief summary of capabilities" required>
+            </div>
+
+            <div class="form-group">
+                <label for="description_long">Long Description</label>
+                <textarea id="description_long" name="description_long" class="form-control" placeholder="Detailed explanation of what your agent does and how it works" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="category">Category</label>
+                <select id="category" name="category" class="form-control" required>
+                    <option value="" disabled selected>Select a category</option>
+                    <option value="Research">Research</option>
+                    <option value="Writing">Writing</option>
+                    <option value="Coding">Coding</option>
+                    <option value="Data Analysis">Data Analysis</option>
+                    <option value="Design">Design</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="price_sats">Price (in SATS)</label>
+                <input type="number" id="price_sats" name="price_sats" class="form-control" placeholder="e.g. 1000" required>
+            </div>
+
+            <div class="form-group">
+                <label for="framework">Framework</label>
+                <select id="framework" name="framework" class="form-control" required>
+                    <option value="" disabled selected>Select a framework</option>
+                    <option value="LangChain">LangChain</option>
+                    <option value="CrewAI">CrewAI</option>
+                    <option value="AutoGen">AutoGen</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="endpoint_url">Endpoint URL</label>
+                <input type="url" id="endpoint_url" name="endpoint_url" class="form-control" placeholder="https://api.yourajent.com/v1" required>
+            </div>
+
+            <div class="form-group">
+                <label>Permissions</label>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="can_read_files" name="permissions" value="can_read_files">
+                        <label for="can_read_files" style="margin-bottom: 0;">Read Files</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="can_write_files" name="permissions" value="can_write_files">
+                        <label for="can_write_files" style="margin-bottom: 0;">Write Files</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="can_make_external_calls" name="permissions" value="can_make_external_calls">
+                        <label for="can_make_external_calls" style="margin-bottom: 0;">External API Calls</label>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="submitBtn">Submit Agent</button>
+        </form>
+
+        <div id="successMessage">
+            🎉 Success! Your agent has been submitted for review. It will appear in the marketplace once verified.
+        </div>
+    </div>
+
+    <footer>
+        <p><a href="index.html">Back to Marketplace</a></p>
+    </footer>
+
+    <script>
+        document.getElementById('submitForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const successMessage = document.getElementById('successMessage');
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            const formData = new FormData(e.target);
+            const permissions = {};
+            formData.getAll('permissions').forEach(p => {
+                permissions[p] = true;
+            });
+
+            const data = {
+                name: formData.get('name'),
+                description_short: formData.get('description_short'),
+                description_long: formData.get('description_long'),
+                category: formData.get('category'),
+                price_sats: parseInt(formData.get('price_sats')),
+                framework: formData.get('framework').toLowerCase(),
+                endpoint_url: formData.get('endpoint_url'),
+                permissions: permissions
+            };
+
+            try {
+                const response = await fetch('https://agentstore-production.up.railway.app/agents/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    successMessage.style.display = 'block';
+                    e.target.style.display = 'none';
+                    document.querySelector('h1').textContent = 'Submission Received';
+                } else {
+                    const error = await response.json();
+                    alert('Submission failed: ' + (error.detail || response.statusText));
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit Agent';
+                }
+            } catch (err) {
+                alert('Error connecting to the server. Please try again later.');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Agent';
+            }
+        });
+    </script>
+</body>
+</html>
