@@ -9,8 +9,8 @@ from agentstore_marketplace import Listing
 from agentstore_trust import PermissionScope, TrustScore
 from agentstore_database import get_db, save_builder, get_builder as get_builder_db, save_agent, delete_agent_db
 
-# Storage for builders
-builders: Dict[str, dict] = {}
+# Storage for builders (deprecated, using agentstore_database instead)
+# builders: Dict[str, dict] = {}
 
 class BuilderRegistration(BaseModel):
     builder_id: str
