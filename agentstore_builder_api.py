@@ -22,7 +22,7 @@ class BuilderRegister(BaseModel):
 
 class AgentSubmission(BaseModel):
     agent_id: Optional[str] = None
-    builder_id: str
+    builder_id: Optional[str] = None
     name: str
     description_short: str
     description_long: str
@@ -56,19 +56,34 @@ async def register_builder(builder: BuilderRegister, db: Session = Depends(get_d
 async def submit_agent(submission: AgentSubmission, db: Session = Depends(get_db)):
     """Submits a new agent to the marketplace."""
     from agentstore_database import get_agent
-    if not get_builder_db(db, submission.builder_id):
-        raise HTTPException(status_code=404, detail="Builder not found. Please register first.")
+    
+    # Use provided builder_id or create a default one
+    builder_id = submission.builder_id or "default_builder"
+    
+    # Check if builder exists, if not create a default one
+    if not get_builder_db(db, builder_id):
+        default_builder = {
+            "builder_id": builder_id,
+            "name": "Default Builder",
+            "email": f"default_{builder_id}@example.com",
+            "bitcoin_address": "default_address"
+        }
+        try:
+            save_builder(db, default_builder)
+        except Exception:
+            # If default builder creation fails (e.g. email conflict), ignore and try to proceed 
+            # or use an existing one if it was just a race condition.
+            pass
     
     # Auto-generate agent_id if not provided
-    if not submission.agent_id:
-        submission.agent_id = str(uuid.uuid4())
+    agent_id = submission.agent_id or str(uuid.uuid4())
 
-    if get_agent(db, submission.agent_id):
+    if get_agent(db, agent_id):
         raise HTTPException(status_code=400, detail="Agent ID already exists")
 
     agent_data = {
-        "id": submission.agent_id,
-        "builder_id": submission.builder_id,
+        "id": agent_id,
+        "builder_id": builder_id,
         "name": submission.name,
         "description_short": submission.description_short,
         "description_long": submission.description_long,
@@ -84,7 +99,7 @@ async def submit_agent(submission: AgentSubmission, db: Session = Depends(get_db
 
     save_agent(db, agent_data)
     
-    return {"message": "Agent submitted successfully", "agent_id": submission.agent_id}
+    return {"message": "Agent submitted successfully", "agent_id": agent_id}
 
 @router.get("/builders/{builder_id}")
 async def get_builder(builder_id: str, db: Session = Depends(get_db)):
