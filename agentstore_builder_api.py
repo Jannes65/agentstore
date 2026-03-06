@@ -37,6 +37,11 @@ async def register_builder(builder: BuilderRegistration, db: Session = Depends(g
     if get_builder_db(db, builder.builder_id):
         raise HTTPException(status_code=400, detail="Builder ID already exists")
     
+    # Check if email already exists
+    from agentstore_database import Builder
+    if db.query(Builder).filter(Builder.email == builder.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+
     builder_data = builder.model_dump()
     save_builder(db, builder_data)
     return {"message": "Builder registered successfully", "builder_id": builder.builder_id}
