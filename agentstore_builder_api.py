@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Dict, List, Optional
@@ -13,11 +14,11 @@ from agentstore_database import get_db, save_builder, get_builder as get_builder
 
 router = APIRouter()
 
-class BuilderRegistration(BaseModel):
-    builder_id: str
+class BuilderRegister(BaseModel):
     name: str
     email: str
     bitcoin_address: str
+    builder_id: Optional[str] = None
 
 class AgentSubmission(BaseModel):
     agent_id: str
@@ -32,8 +33,12 @@ class AgentSubmission(BaseModel):
     framework: str
 
 @router.post("/builders/register")
-async def register_builder(builder: BuilderRegistration, db: Session = Depends(get_db)):
+async def register_builder(builder: BuilderRegister, db: Session = Depends(get_db)):
     """Registers a new builder profile."""
+    # Auto-generate builder_id if not provided
+    if not builder.builder_id:
+        builder.builder_id = str(uuid.uuid4())
+
     if get_builder_db(db, builder.builder_id):
         raise HTTPException(status_code=400, detail="Builder ID already exists")
     
