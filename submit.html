@@ -1,3 +1,4 @@
+<!-- v1.2 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -308,12 +309,14 @@
                     document.querySelector('h1').textContent = 'Submission Received';
                 } else {
                     const error = await response.json();
-                    alert('Submission failed: ' + (error.detail || response.statusText));
+                    const errorMessage = error.detail || error.message || JSON.stringify(error);
+                    alert('Submission failed: ' + errorMessage);
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Submit Agent';
                 }
-            } catch (err) {
-                alert('Error connecting to the server. Please try again later.');
+            } catch (error) {
+                const errorMessage = error.detail || error.message || JSON.stringify(error);
+                alert('Submission failed: ' + errorMessage);
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Submit Agent';
             }

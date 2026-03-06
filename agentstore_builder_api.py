@@ -21,7 +21,7 @@ class BuilderRegister(BaseModel):
     builder_id: Optional[str] = None
 
 class AgentSubmission(BaseModel):
-    agent_id: str
+    agent_id: Optional[str] = None
     builder_id: str
     name: str
     description_short: str
@@ -29,7 +29,7 @@ class AgentSubmission(BaseModel):
     category: str
     price_sats: int
     endpoint_url: str
-    permissions: dict
+    permissions: dict = Field(default_factory=dict)
     framework: str
 
 @router.post("/builders/register")
@@ -59,6 +59,10 @@ async def submit_agent(submission: AgentSubmission, db: Session = Depends(get_db
     if not get_builder_db(db, submission.builder_id):
         raise HTTPException(status_code=404, detail="Builder not found. Please register first.")
     
+    # Auto-generate agent_id if not provided
+    if not submission.agent_id:
+        submission.agent_id = str(uuid.uuid4())
+
     if get_agent(db, submission.agent_id):
         raise HTTPException(status_code=400, detail="Agent ID already exists")
 
