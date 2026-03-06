@@ -76,6 +76,9 @@ def get_db():
         db.close()
 
 def save_builder(db: Session, builder_data: dict):
+    # Map builder_id to id for the ORM model
+    if "builder_id" in builder_data:
+        builder_data["id"] = builder_data.pop("builder_id")
     db_builder = Builder(**builder_data)
     db.add(db_builder)
     db.commit()

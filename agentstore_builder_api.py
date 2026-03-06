@@ -48,6 +48,7 @@ async def register_builder(builder: BuilderRegister, db: Session = Depends(get_d
         raise HTTPException(status_code=400, detail="Email already registered")
 
     builder_data = builder.model_dump()
+    # builder_id is mapped to id in save_builder
     save_builder(db, builder_data)
     return {"message": "Builder registered successfully", "builder_id": builder.builder_id}
 
