@@ -101,6 +101,11 @@
             border-color: var(--accent-color);
         }
 
+        .form-control.invalid {
+            border-color: var(--danger-color);
+            box-shadow: 0 0 0 1px var(--danger-color);
+        }
+
         textarea.form-control {
             resize: vertical;
             min-height: 100px;
@@ -218,7 +223,7 @@
 
             <div class="form-group">
                 <label for="price_sats">Price (in SATS)</label>
-                <input type="number" id="price_sats" name="price_sats" class="form-control" placeholder="e.g. 1000" required>
+                <input type="number" id="price_sats" name="price_sats" class="form-control" placeholder="e.g. 5000" required>
             </div>
 
             <div class="form-group">
@@ -234,7 +239,7 @@
 
             <div class="form-group">
                 <label for="endpoint_url">Endpoint URL</label>
-                <input type="url" id="endpoint_url" name="endpoint_url" class="form-control" placeholder="https://api.yourajent.com/v1" required>
+                <input type="url" id="endpoint_url" name="endpoint_url" class="form-control" placeholder="http://your-agent-endpoint.com">
             </div>
 
             <div class="form-group">
@@ -268,9 +273,39 @@
     </footer>
 
     <script>
+        // Real-time validation for required fields
+        document.querySelectorAll('.form-control[required]').forEach(input => {
+            input.addEventListener('blur', () => {
+                if (!input.value.trim()) {
+                    input.classList.add('invalid');
+                } else {
+                    input.classList.remove('invalid');
+                }
+            });
+            input.addEventListener('input', () => {
+                if (input.value.trim()) {
+                    input.classList.remove('invalid');
+                }
+            });
+        });
+
         document.getElementById('submitForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            // Check for empty required fields before submitting
+            let hasError = false;
+            document.querySelectorAll('.form-control[required]').forEach(input => {
+                if (!input.value.trim()) {
+                    input.classList.add('invalid');
+                    hasError = true;
+                }
+            });
+
+            if (hasError) {
+                alert('Please fill in all required fields highlighted in red.');
+                return;
+            }
+
             const submitBtn = document.getElementById('submitBtn');
             const successMessage = document.getElementById('successMessage');
             
@@ -290,7 +325,7 @@
                 category: formDataRaw.get('category'),
                 price_sats: parseInt(formDataRaw.get('price_sats')),
                 framework: formDataRaw.get('framework').toLowerCase(),
-                endpoint_url: formDataRaw.get('endpoint_url'),
+                endpoint_url: formDataRaw.get('endpoint_url') || "http://localhost:8001",
                 permissions: permissions
             };
 
