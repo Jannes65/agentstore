@@ -2,7 +2,6 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
-from agentstore_api import app, marketplace
 from agentstore_schema import Category
 from agentstore_adapter import LangChainAdapter, CrewAIAdapter, AutoGenAdapter, AgentStoreAdapter
 from agentstore_marketplace import Listing
@@ -11,6 +10,8 @@ from agentstore_database import get_db, save_builder, get_builder as get_builder
 
 # Storage for builders (deprecated, using agentstore_database instead)
 # builders: Dict[str, dict] = {}
+
+router = APIRouter()
 
 class BuilderRegistration(BaseModel):
     builder_id: str
@@ -30,7 +31,7 @@ class AgentSubmission(BaseModel):
     permissions: dict
     framework: str
 
-@app.post("/builders/register")
+@router.post("/builders/register")
 async def register_builder(builder: BuilderRegistration, db: Session = Depends(get_db)):
     """Registers a new builder profile."""
     if get_builder_db(db, builder.builder_id):
@@ -40,7 +41,7 @@ async def register_builder(builder: BuilderRegistration, db: Session = Depends(g
     save_builder(db, builder_data)
     return {"message": "Builder registered successfully", "builder_id": builder.builder_id}
 
-@app.post("/agents/submit")
+@router.post("/agents/submit")
 async def submit_agent(submission: AgentSubmission, db: Session = Depends(get_db)):
     """Submits a new agent to the marketplace."""
     from agentstore_database import get_agent
@@ -70,7 +71,7 @@ async def submit_agent(submission: AgentSubmission, db: Session = Depends(get_db
     
     return {"message": "Agent submitted successfully", "agent_id": submission.agent_id}
 
-@app.get("/builders/{builder_id}")
+@router.get("/builders/{builder_id}")
 async def get_builder(builder_id: str, db: Session = Depends(get_db)):
     """Returns builder profile and their listed agents."""
     builder = get_builder_db(db, builder_id)
@@ -98,7 +99,7 @@ async def get_builder(builder_id: str, db: Session = Depends(get_db)):
         ]
     }
 
-@app.delete("/agents/{agent_id}")
+@router.delete("/agents/{agent_id}")
 async def delete_agent(agent_id: str, builder_id: str, db: Session = Depends(get_db)):
     """Builder can delist their agent."""
     from agentstore_database import get_agent
@@ -115,4 +116,7 @@ async def delete_agent(agent_id: str, builder_id: str, db: Session = Depends(get
 
 if __name__ == "__main__":
     import uvicorn
+    from fastapi import FastAPI
+    app = FastAPI()
+    app.include_router(router)
     uvicorn.run(app, host="0.0.0.0", port=8000)

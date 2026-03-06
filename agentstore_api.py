@@ -11,8 +11,10 @@ from agentstore_adapter import LangChainAdapter, CrewAIAdapter, AutoGenAdapter
 from agentstore_trust import PermissionScope, TrustScore, ExecutionLog
 from agentstore_marketplace import Marketplace, Listing
 from agentstore_database import init_db, get_db, save_agent, get_agent as get_agent_db, get_all_agents, save_execution_log, add_to_waitlist
+from agentstore_builder_api import router as builder_router
 
 app = FastAPI(title="AgentStore API")
+app.include_router(builder_router)
 
 # Add CORS middleware to allow the UI to fetch agents
 app.add_middleware(
