@@ -25,7 +25,11 @@ async def create_invoice(amount_sats: int, memo: str, external_ref: str):
                 }
             )
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            return {
+                "engine_invoice_ref": data["engineInvoiceRef"],
+                "payment_request": data["paymentRequest"]
+            }
     except Exception as e:
         import traceback
         logging.error(f"create_invoice error: {traceback.format_exc()}")
