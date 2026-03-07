@@ -11,7 +11,7 @@ async def create_invoice(amount_sats: int, memo: str, external_ref: str):
     try:
         api_key = CHATABIT_API_KEY
         logging.warning(f"Auth header: Bearer {api_key[:15] if api_key else 'NONE'}...")
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
                 f"{BASE_URL}/invoices",
                 headers={
@@ -39,7 +39,7 @@ async def check_payment(engine_invoice_ref: str):
     """Calls GET https://chatabit.replit.app/subscriptionless-bridge/v1/invoices/:id"""
     api_key = CHATABIT_API_KEY
     logging.warning(f"Auth header: Bearer {api_key[:15] if api_key else 'NONE'}...")
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.get(
             f"{BASE_URL}/invoices/{engine_invoice_ref}",
             headers={
