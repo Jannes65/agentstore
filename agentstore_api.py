@@ -222,9 +222,9 @@ async def payment_status(engine_invoice_ref: str):
     try:
         status = await check_payment(engine_invoice_ref)
         if status.get("status") == "paid":
-            # Chatabit returns external_ref which we set to user_id
-            user_id = status.get("external_ref")
-            amount_sats = status.get("amount")
+            # Chatabit returns externalRef which we set to user_id
+            user_id = status.get("externalRef")
+            amount_sats = status.get("amountSats")
             if user_id and amount_sats:
                 credit_balance(user_id, amount_sats)
                 return {"status": "paid", "message": "Balance credited"}

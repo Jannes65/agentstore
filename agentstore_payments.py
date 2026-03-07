@@ -48,4 +48,6 @@ async def check_payment(engine_invoice_ref: str):
             }
         )
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        logging.warning(f"Chatabit status response: {data}")
+        return data
