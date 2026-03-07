@@ -19,9 +19,9 @@ async def create_invoice(amount_sats: int, memo: str, external_ref: str):
                     "Content-Type": "application/json"
                 },
                 json={
-                    "amount": amount_sats,
+                    "amountSats": amount_sats,
                     "memo": memo,
-                    "external_ref": external_ref
+                    "externalRef": external_ref
                 }
             )
             response.raise_for_status()
