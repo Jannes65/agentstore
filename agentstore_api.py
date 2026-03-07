@@ -12,6 +12,8 @@ from agentstore_trust import PermissionScope, TrustScore, ExecutionLog
 from agentstore_marketplace import Marketplace, Listing
 from agentstore_database import init_db, get_db, save_agent, get_agent as get_agent_db, get_all_agents, save_execution_log, add_to_waitlist
 from agentstore_builder_api import router as builder_router
+from agentstore_payments import create_invoice, check_payment
+from agentstore_ledger import credit_balance, get_balance
 
 app = FastAPI(title="AgentStore API")
 app.include_router(builder_router)
@@ -36,6 +38,10 @@ class WaitlistEntry(BaseModel):
 # Request body model for running an agent
 class RunInput(BaseModel):
     input: str
+
+class DepositRequest(BaseModel):
+    user_id: str
+    amount_sats: int
 
 @app.on_event("startup")
 async def startup_event():
@@ -180,7 +186,6 @@ async def join_waitlist(entry: WaitlistEntry, db: Session = Depends(get_db)):
 @app.post("/chat")
 async def chat(request: dict):
     import httpx
-    import os
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "https://api.anthropic.com/v1/messages",
@@ -196,6 +201,42 @@ async def chat(request: dict):
         print(f"Anthropic response status: {response.status_code}")
         print(f"Anthropic response: {result}")
         return result
+
+@app.post("/payments/deposit")
+async def deposit(req: DepositRequest):
+    """Creates invoice, returns paymentRequest and engineInvoiceRef"""
+    try:
+        memo = f"Deposit for user {req.user_id}"
+        # We use user_id as external_ref to identify the user on callback/status check
+        invoice = await create_invoice(req.amount_sats, memo, req.user_id)
+        return {
+            "paymentRequest": invoice["payment_request"],
+            "engineInvoiceRef": invoice["engine_invoice_ref"]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/payments/status/{engine_invoice_ref}")
+async def payment_status(engine_invoice_ref: str):
+    """Checks payment, if paid credits user balance"""
+    try:
+        status = await check_payment(engine_invoice_ref)
+        if status.get("status") == "paid":
+            # Chatabit returns external_ref which we set to user_id
+            user_id = status.get("external_ref")
+            amount_sats = status.get("amount")
+            if user_id and amount_sats:
+                credit_balance(user_id, amount_sats)
+                return {"status": "paid", "message": "Balance credited"}
+        return {"status": status.get("status", "pending")}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/payments/balance/{user_id}")
+async def read_balance(user_id: str):
+    """Returns current balance"""
+    balance = get_balance(user_id)
+    return {"user_id": user_id, "balance_sats": balance}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

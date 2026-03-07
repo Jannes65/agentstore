@@ -63,6 +63,11 @@ class Waitlist(Base):
     name = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class UserBalance(Base):
+    __tablename__ = "user_balances"
+    user_id = Column(String, primary_key=True, index=True)
+    balance_sats = Column(Integer, default=0)
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 
