@@ -9,11 +9,14 @@ BASE_URL = "https://chatabit.replit.app/subscriptionless-bridge/v1"
 async def create_invoice(amount_sats: int, memo: str, external_ref: str):
     """Calls POST https://chatabit.replit.app/subscriptionless-bridge/v1/invoices"""
     api_key = CHATABIT_API_KEY
-    logging.warning(f"Using API key starting with: {api_key[:8] if api_key else 'NONE'}")
+    logging.warning(f"Auth header: Bearer {api_key[:15] if api_key else 'NONE'}...")
     async with httpx.AsyncClient() as client:
         response = await client.post(
             f"{BASE_URL}/invoices",
-            headers={"x-api-key": CHATABIT_API_KEY},
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            },
             json={
                 "amount": amount_sats,
                 "memo": memo,
@@ -26,11 +29,14 @@ async def create_invoice(amount_sats: int, memo: str, external_ref: str):
 async def check_payment(engine_invoice_ref: str):
     """Calls GET https://chatabit.replit.app/subscriptionless-bridge/v1/invoices/:id"""
     api_key = CHATABIT_API_KEY
-    logging.warning(f"Using API key starting with: {api_key[:8] if api_key else 'NONE'}")
+    logging.warning(f"Auth header: Bearer {api_key[:15] if api_key else 'NONE'}...")
     async with httpx.AsyncClient() as client:
         response = await client.get(
             f"{BASE_URL}/invoices/{engine_invoice_ref}",
-            headers={"x-api-key": CHATABIT_API_KEY}
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
         )
         response.raise_for_status()
         return response.json()
