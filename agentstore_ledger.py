@@ -85,8 +85,11 @@ def credit_agent(agent_id: str, sats: int):
     finally:
         db.close()
 
-def deduct_agent(agent_id: str, sats: int):
-    db = SessionLocal()
+def deduct_agent(agent_id: str, sats: int, db: Optional[Session] = None):
+    should_close = False
+    if db is None:
+        db = SessionLocal()
+        should_close = True
     try:
         agent_balance = db.query(AgentBalance).filter(AgentBalance.agent_id == agent_id).first()
         if not agent_balance or agent_balance.balance_sats < sats:
@@ -94,6 +97,20 @@ def deduct_agent(agent_id: str, sats: int):
         
         agent_balance.balance_sats -= sats
         db.commit()
+    finally:
+        if should_close:
+            db.close()
+
+def get_transactions(user_id: str = None, agent_id: str = None) -> list:
+    db = SessionLocal()
+    try:
+        query = db.query(LedgerTransaction)
+        if user_id:
+            query = query.filter(LedgerTransaction.from_account == user_id)
+        if agent_id:
+            query = query.filter(LedgerTransaction.agent_id == agent_id)
+        
+        return query.order_by(LedgerTransaction.created_at.desc()).all()
     finally:
         db.close()
 

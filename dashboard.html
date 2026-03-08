@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Builder Dashboard - AgentStore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .btc-orange { color: #f7931a; }
+        .bg-btc-orange { background-color: #f7931a; }
+        .bg-btc-orange:hover { background-color: #e88310; }
+        .card { background-color: #1e293b; border: 1px solid #334155; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navbar -->
+    <nav class="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <a href="index.html" class="flex items-center space-x-2">
+                    <span class="text-2xl font-bold btc-orange">AgentStore</span>
+                </a>
+                <div class="flex items-center space-x-4">
+                    <a href="builder.html" class="text-slate-300 hover:text-white">Builder Guide</a>
+                    <button id="logoutBtn" class="hidden text-slate-300 hover:text-white">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Login Section -->
+    <div id="loginSection" class="max-w-md mx-auto mt-20 p-8 card rounded-xl shadow-2xl">
+        <h2 class="text-2xl font-bold mb-6 text-center">Builder Login</h2>
+        <p class="text-slate-400 mb-6 text-sm text-center">Enter your Builder ID to access your dashboard.</p>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-1">Builder ID</label>
+                <input type="text" id="builderIdInput" placeholder="e.g. alice_01" 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-orange-500">
+            </div>
+            <button id="loginBtn" class="w-full bg-btc-orange text-white font-bold py-2 rounded-lg transition">
+                Access Dashboard
+            </button>
+        </div>
+    </div>
+
+    <!-- Dashboard Content (Hidden by default) -->
+    <main id="dashboardContent" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Left Column: Profile & Earnings -->
+            <div class="lg:col-span-1 space-y-8">
+                <!-- Profile Card -->
+                <div class="card p-6 rounded-xl">
+                    <h3 class="text-lg font-semibold mb-4 text-slate-400">Builder Profile</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-xs text-slate-500 uppercase">Name</p>
+                            <p id="builderName" class="font-medium">-</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 uppercase">Email</p>
+                            <p id="builderEmail" class="font-medium">-</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 uppercase">Builder ID</p>
+                            <p id="builderIdDisplay" class="font-mono text-sm text-slate-300">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Earnings Card -->
+                <div class="card p-6 rounded-xl border-orange-500/30 bg-orange-500/5">
+                    <h3 class="text-lg font-semibold mb-2 text-slate-400">Total Earnings</h3>
+                    <div class="flex items-baseline space-x-2">
+                        <span id="totalEarnings" class="text-4xl font-bold btc-orange">0</span>
+                        <span class="text-slate-400 font-medium">SATS</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2">Available for withdrawal</p>
+                    <button id="withdrawBtn" class="w-full mt-6 bg-btc-orange text-white font-bold py-3 rounded-lg shadow-lg shadow-orange-500/20 transition">
+                        Withdraw via Lightning
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Column: Agents & Transactions -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- Agents List -->
+                <div class="card rounded-xl overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+                        <h3 class="text-lg font-semibold">Your Agents</h3>
+                        <a href="submit.html" class="text-sm btc-orange hover:underline">+ Submit New</a>
+                    </div>
+                    <div id="agentsList" class="divide-y divide-slate-700">
+                        <!-- Agent items will be injected here -->
+                        <div class="p-8 text-center text-slate-500">No agents found.</div>
+                    </div>
+                </div>
+
+                <!-- Transaction History -->
+                <div class="card rounded-xl overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-700">
+                        <h3 class="text-lg font-semibold">Transaction History</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-800 text-slate-400 text-xs uppercase">
+                                <tr>
+                                    <th class="px-6 py-3">Date</th>
+                                    <th class="px-6 py-3">Agent</th>
+                                    <th class="px-6 py-3">Amount</th>
+                                    <th class="px-6 py-3">Type</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionHistory" class="divide-y divide-slate-700 text-sm">
+                                <!-- Transactions will be injected here -->
+                                <tr>
+                                    <td colspan="4" class="px-6 py-8 text-center text-slate-500">No transactions yet.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Withdrawal Modal -->
+    <div id="withdrawModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center z-[100] p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-8 shadow-2xl">
+            <h2 class="text-2xl font-bold mb-2">Withdraw Earnings</h2>
+            <p class="text-slate-400 mb-6 text-sm">Paste a Lightning invoice for <span id="withdrawAmount" class="font-bold text-white">0</span> SATS.</p>
+            
+            <textarea id="lnInvoiceInput" rows="4" placeholder="lnbc1..." 
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white text-sm font-mono focus:outline-none focus:border-orange-500 mb-6"></textarea>
+            
+            <div class="flex space-x-3">
+                <button onclick="closeWithdrawModal()" class="flex-1 px-6 py-3 border border-slate-700 rounded-xl font-semibold hover:bg-slate-800 transition">Cancel</button>
+                <button id="confirmWithdrawBtn" class="flex-1 px-6 py-3 bg-btc-orange text-white rounded-xl font-bold shadow-lg shadow-orange-500/20 transition">Send Payout</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://agentstore-production.up.railway.app';
+        let currentBuilderId = localStorage.getItem('builderId');
+
+        const loginSection = document.getElementById('loginSection');
+        const dashboardContent = document.getElementById('dashboardContent');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const builderIdInput = document.getElementById('builderIdInput');
+        const loginBtn = document.getElementById('loginBtn');
+
+        const withdrawModal = document.getElementById('withdrawModal');
+        const withdrawAmount = document.getElementById('withdrawAmount');
+        const lnInvoiceInput = document.getElementById('lnInvoiceInput');
+        const confirmWithdrawBtn = document.getElementById('confirmWithdrawBtn');
+
+        // Init
+        if (currentBuilderId) {
+            showDashboard();
+        }
+
+        loginBtn.onclick = () => {
+            const id = builderIdInput.value.trim();
+            if (id) {
+                currentBuilderId = id;
+                localStorage.setItem('builderId', id);
+                showDashboard();
+            }
+        };
+
+        logoutBtn.onclick = () => {
+            localStorage.removeItem('builderId');
+            currentBuilderId = null;
+            location.reload();
+        };
+
+        async function showDashboard() {
+            loginSection.classList.add('hidden');
+            dashboardContent.classList.remove('hidden');
+            logoutBtn.classList.remove('hidden');
+            
+            await refreshData();
+        }
+
+        async function refreshData() {
+            try {
+                const response = await fetch(`${API_BASE}/builders/${currentBuilderId}`);
+                if (!response.ok) throw new Error('Builder not found');
+                const data = await response.json();
+
+                // Update Profile
+                document.getElementById('builderName').textContent = data.profile.name;
+                document.getElementById('builderEmail').textContent = data.profile.email;
+                document.getElementById('builderIdDisplay').textContent = data.profile.builder_id;
+
+                // Update Agents
+                const agentsList = document.getElementById('agentsList');
+                if (data.agents.length > 0) {
+                    let totalSats = 0;
+                    agentsList.innerHTML = data.agents.map(agent => {
+                        totalSats += agent.balance_sats;
+                        return `
+                            <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <h4 class="font-bold text-lg">${agent.name}</h4>
+                                    <div class="flex items-center space-x-3 mt-1">
+                                        <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">${agent.category}</span>
+                                        <span class="text-xs text-slate-500">${agent.run_count} runs</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-8">
+                                    <div class="text-right">
+                                        <p class="text-xs text-slate-500 uppercase">Price</p>
+                                        <p class="font-bold">${agent.price_sats} SATS</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-xs text-slate-500 uppercase">Earned</p>
+                                        <p class="font-bold btc-orange">${agent.balance_sats} SATS</p>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button onclick="editPrice('${agent.id}', ${agent.price_sats})" class="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                        </button>
+                                        <button onclick="delistAgent('${agent.id}')" class="p-2 hover:bg-red-900/30 rounded text-slate-400 hover:text-red-500 transition">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    document.getElementById('totalEarnings').textContent = totalSats;
+                    withdrawAmount.textContent = totalSats;
+                }
+
+                // Update Transactions
+                const txResponse = await fetch(`${API_BASE}/builders/${currentBuilderId}/transactions`);
+                const txs = await txResponse.json();
+                const txHistory = document.getElementById('transactionHistory');
+                if (txs.length > 0) {
+                    txHistory.innerHTML = txs.map(tx => `
+                        <tr>
+                            <td class="px-6 py-4 text-slate-500">${new Date(tx.created_at).toLocaleDateString()}</td>
+                            <td class="px-6 py-4 font-medium">${tx.agent_name}</td>
+                            <td class="px-6 py-4 font-bold ${tx.type === 'agent_run' ? 'text-green-500' : 'text-orange-500'}">
+                                ${tx.type === 'agent_run' ? '+' : '-'}${tx.amount_sats}
+                            </td>
+                            <td class="px-6 py-4 capitalize">${tx.type.replace('_', ' ')}</td>
+                        </tr>
+                    `).join('');
+                }
+
+            } catch (err) {
+                alert('Error loading dashboard: ' + err.message);
+                localStorage.removeItem('builderId');
+                location.reload();
+            }
+        }
+
+        async function editPrice(agentId, currentPrice) {
+            const newPrice = prompt(`Enter new price in SATS for agent ${agentId}:`, currentPrice);
+            if (newPrice && !isNaN(newPrice)) {
+                const response = await fetch(`${API_BASE}/agents/${agentId}/price`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({price_sats: parseInt(newPrice)})
+                });
+                if (response.ok) {
+                    alert('Price updated!');
+                    refreshData();
+                }
+            }
+        }
+
+        async function delistAgent(agentId) {
+            if (confirm(`Are you sure you want to delist agent ${agentId}?`)) {
+                const response = await fetch(`${API_BASE}/agents/${agentId}?builder_id=${currentBuilderId}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    alert('Agent delisted!');
+                    refreshData();
+                }
+            }
+        }
+
+        document.getElementById('withdrawBtn').onclick = () => {
+            const amount = document.getElementById('totalEarnings').textContent;
+            if (parseInt(amount) <= 0) {
+                alert('No earnings to withdraw.');
+                return;
+            }
+            withdrawModal.classList.remove('hidden');
+        };
+
+        function closeWithdrawModal() {
+            withdrawModal.classList.add('hidden');
+            lnInvoiceInput.value = '';
+        }
+
+        confirmWithdrawBtn.onclick = async () => {
+            const invoice = lnInvoiceInput.value.trim();
+            if (!invoice) {
+                alert('Please enter a Lightning invoice.');
+                return;
+            }
+
+            confirmWithdrawBtn.disabled = true;
+            confirmWithdrawBtn.textContent = 'Processing...';
+
+            try {
+                const response = await fetch(`${API_BASE}/builders/${currentBuilderId}/withdraw`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({lightning_invoice: invoice})
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert(result.message);
+                    closeWithdrawModal();
+                    refreshData();
+                } else {
+                    alert('Withdrawal failed: ' + (result.detail || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Withdrawal error: ' + err.message);
+            } finally {
+                confirmWithdrawBtn.disabled = false;
+                confirmWithdrawBtn.textContent = 'Send Payout';
+            }
+        };
+    </script>
+</body>
+</html>

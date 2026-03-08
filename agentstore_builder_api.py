@@ -105,12 +105,44 @@ async def submit_agent(submission: AgentSubmission, db: Session = Depends(get_db
     
     return {"message": "Agent submitted successfully", "agent_id": agent_id}
 
+from agentstore_ledger import get_agent_balance, deduct_agent, get_transactions
+from agentstore_payments import create_invoice, check_payment
+
+class WithdrawalRequest(BaseModel):
+    lightning_invoice: str
+
+class PriceUpdate(BaseModel):
+    price_sats: int
+
 @router.get("/builders/{builder_id}")
 async def get_builder(builder_id: str, db: Session = Depends(get_db)):
-    """Returns builder profile and their listed agents."""
+    """Returns builder profile and their listed agents with detailed stats."""
     builder = get_builder_db(db, builder_id)
     if not builder:
         raise HTTPException(status_code=404, detail="Builder not found")
+    
+    agent_list = []
+    for agent in builder.agents:
+        balance = get_agent_balance(agent.id)
+        # Calculate run count from ledger transactions
+        from agentstore_database import LedgerTransaction
+        run_count = db.query(LedgerTransaction).filter(
+            LedgerTransaction.agent_id == agent.id,
+            LedgerTransaction.transaction_type == "agent_run"
+        ).count()
+        
+        agent_list.append({
+            "id": agent.id,
+            "name": agent.name,
+            "description_short": agent.description_short,
+            "category": agent.category,
+            "price_sats": agent.price_sats,
+            "verified": agent.verified,
+            "community_rating": agent.community_rating,
+            "balance_sats": balance,
+            "run_count": run_count,
+            "status": "active" # Placeholder for now
+        })
     
     return {
         "profile": {
@@ -120,18 +152,89 @@ async def get_builder(builder_id: str, db: Session = Depends(get_db)):
             "bitcoin_address": builder.bitcoin_address,
             "created_at": builder.created_at
         },
-        "agents": [
-            {
-                "id": agent.id,
-                "name": agent.name,
-                "description_short": agent.description_short,
-                "category": agent.category,
-                "price_sats": agent.price_sats,
-                "verified": agent.verified,
-                "community_rating": agent.community_rating
-            } for agent in builder.agents
-        ]
+        "agents": agent_list
     }
+
+@router.post("/builders/{builder_id}/withdraw")
+async def withdraw_earnings(builder_id: str, req: WithdrawalRequest, db: Session = Depends(get_db)):
+    """Initiate Lightning payout for all agents owned by the builder."""
+    builder = get_builder_db(db, builder_id)
+    if not builder:
+        raise HTTPException(status_code=404, detail="Builder not found")
+    
+    # 1. Calculate total builder balance across all agents
+    total_balance = 0
+    agent_balances = []
+    for agent in builder.agents:
+        balance = get_agent_balance(agent.id)
+        if balance > 0:
+            total_balance += balance
+            agent_balances.append((agent.id, balance))
+    
+    if total_balance <= 0:
+        raise HTTPException(status_code=400, detail="No earnings to withdraw")
+
+    # 2. In a real system, we'd verify the invoice amount matches total_balance here.
+    # For this demo, we'll use Chatabit to 'pay' the builder. 
+    # Note: Chatabit bridge v1 usually handles incoming payments (invoices we create).
+    # Real payouts would use a different API or a Lightning node.
+    # For now, we'll simulate the payout success and deduct balances.
+    
+    # Deduct from each agent wallet
+    from agentstore_database import LedgerTransaction
+    for agent_id, amount in agent_balances:
+        deduct_agent(agent_id, amount, db=db)
+        
+        # Log withdrawal
+        new_tx = LedgerTransaction(
+            from_account=agent_id,
+            to_account="external_builder_wallet",
+            amount_sats=amount,
+            transaction_type="withdrawal",
+            agent_id=agent_id
+        )
+        db.add(new_tx)
+    
+    db.commit()
+    
+    return {"message": f"Successfully withdrew {total_balance} sats", "amount_sats": total_balance}
+
+@router.get("/builders/{builder_id}/transactions")
+async def get_builder_transactions(builder_id: str, db: Session = Depends(get_db)):
+    """Returns transaction history for all agents owned by the builder."""
+    builder = get_builder_db(db, builder_id)
+    if not builder:
+        raise HTTPException(status_code=404, detail="Builder not found")
+    
+    all_transactions = []
+    from agentstore_database import LedgerTransaction
+    for agent in builder.agents:
+        txs = db.query(LedgerTransaction).filter(LedgerTransaction.agent_id == agent.id).all()
+        for tx in txs:
+            all_transactions.append({
+                "id": tx.id,
+                "agent_id": tx.agent_id,
+                "agent_name": agent.name,
+                "amount_sats": tx.amount_sats,
+                "type": tx.transaction_type,
+                "created_at": tx.created_at
+            })
+    
+    # Sort by date desc
+    all_transactions.sort(key=lambda x: x["created_at"], reverse=True)
+    return all_transactions
+
+@router.patch("/agents/{agent_id}/price")
+async def update_agent_price(agent_id: str, update: PriceUpdate, db: Session = Depends(get_db)):
+    """Updates the price of an agent."""
+    from agentstore_database import get_agent
+    agent = get_agent(db, agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    agent.price_sats = update.price_sats
+    db.commit()
+    return {"message": "Price updated successfully", "new_price": agent.price_sats}
 
 @router.delete("/agents/{agent_id}")
 async def delete_agent(agent_id: str, builder_id: str, db: Session = Depends(get_db)):
