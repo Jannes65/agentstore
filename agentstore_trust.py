@@ -16,10 +16,10 @@ class PermissionScope(BaseModel):
 class ExecutionLog(BaseModel):
     """Logs the results of an agent execution."""
     agent_id: str
-    timestamp: str
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
     input_str: str
     output: str
-    permissions_used: List[str]
+    permissions_used: list = []
 
 class SandboxedRunner:
     """Wraps an adapter and enforces PermissionScope constraints."""

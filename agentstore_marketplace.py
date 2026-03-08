@@ -108,11 +108,16 @@ class Marketplace:
 
             # Return execution log
             from agentstore_trust import ExecutionLog
+            
+            # Ensure permissions_used is a list, not a dict (agent.permissions is JSON/dict)
+            perms = agent.permissions or {}
+            permissions_list = [k for k, v in perms.items() if v] if isinstance(perms, dict) else []
+            
             return ExecutionLog(
                 agent_id=agent_id,
                 input_str=input_str,
                 output=output,
-                permissions_used=agent.permissions
+                permissions_used=permissions_list
             )
         finally:
             db.close()
