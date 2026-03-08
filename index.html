@@ -1012,6 +1012,9 @@
             manualCheckBtn.innerText = 'Verifying...';
 
             try {
+                // Wait 3 seconds before calling status endpoint
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
                 const response = await fetch(`${API_BASE}/payments/status/${activeEngineInvoiceRef}`);
                 const data = await response.json();
 
