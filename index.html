@@ -808,51 +808,6 @@
             document.getElementById('modalDescription').innerText = agent.description_long || agent.description_short || "No description provided.";
             document.getElementById('modalPrice').innerText = `${agent.price_sats} SATS`;
             
-            // Example Tasks
-            const metadata = agent.agent_metadata || {};
-            const examples = metadata.example_tasks || [];
-            if (examples.length > 0) {
-                exampleTasksContainer.style.display = 'block';
-                modalExampleTasks.innerHTML = examples.map(task => `<li>${task}</li>`).join('');
-            } else {
-                exampleTasksContainer.style.display = 'none';
-            }
-
-            // Task Types and Structured Options
-            const taskTypes = metadata.task_types || [];
-            taskButtons.innerHTML = '';
-            if (taskTypes.length > 0) {
-                taskTypeContainer.style.display = 'block';
-                taskTypes.forEach(tt => {
-                    const btn = document.createElement('button');
-                    btn.className = 'btn btn-outline';
-                    btn.style.padding = '0.5rem 1rem';
-                    btn.style.fontSize = '0.9rem';
-                    btn.innerText = tt.label;
-                    btn.onclick = () => {
-                        // Clear previous active states
-                        Array.from(taskButtons.children).forEach(b => b.classList.remove('btn-primary'));
-                        Array.from(taskButtons.children).forEach(b => b.classList.add('btn-outline'));
-                        
-                        btn.classList.remove('btn-outline');
-                        btn.classList.add('btn-primary');
-                        
-                        specificInputContainer.style.display = 'block';
-                        specificInputLabel.innerText = tt.input_label || tt.label + " Input:";
-                        agentInput.placeholder = tt.input_placeholder || "Enter details here...";
-                        agentInput.value = '';
-                        agentInput.focus();
-                    };
-                    taskButtons.appendChild(btn);
-                });
-                specificInputContainer.style.display = 'none'; // Hide until task is selected
-            } else {
-                taskTypeContainer.style.display = 'none';
-                specificInputContainer.style.display = 'block';
-                specificInputLabel.innerText = 'Task Input:';
-                agentInput.placeholder = "Describe what you want this agent to do...";
-            }
-
             // Build Permissions Section
             const perms = agent.permissions || {};
             // Support both old and new field names
@@ -875,6 +830,13 @@
                     <span>Make External API Calls</span>
                 </div>
             `;
+
+            // Reset Input for simplified flow
+            taskTypeContainer.style.display = 'none';
+            exampleTasksContainer.style.display = 'none';
+            specificInputContainer.style.display = 'block';
+            specificInputLabel.innerText = 'Task Input:';
+            agentInput.placeholder = "Describe what you want this agent to do...";
 
             // Persistence for Wallet ID
             if (sessionStorage.getItem('user_id')) {
@@ -902,13 +864,7 @@
 
         runAgentBtn.onclick = async () => {
             const userId = userIdInput.value.trim();
-            let taskInput = agentInput.value.trim();
-
-            // If task types exist, prepend the selected task type label for better context
-            const activeTaskBtn = taskButtons.querySelector('.btn-primary');
-            if (activeTaskBtn) {
-                taskInput = `[${activeTaskBtn.innerText}] ${taskInput}`;
-            }
+            const taskInput = agentInput.value.trim();
 
             if (!userId) {
                 alert('Please enter a Wallet ID');

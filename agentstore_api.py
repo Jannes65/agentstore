@@ -61,13 +61,6 @@ async def startup_event():
             "price_sats": 500,
             "endpoint_url": "http://localhost:8001",
             "permissions": {"can_read_files": True},
-            "agent_metadata": {
-                "example_tasks": ["Summarise a long article URL", "Find the main point of this blog post"],
-                "task_types": [
-                    {"label": "Summarise URL", "input_placeholder": "Paste your URL here..."},
-                    {"label": "Extract Keywords", "input_placeholder": "Paste text or URL here..."}
-                ]
-            },
             "framework": "langchain",
             "verified": True,
             "community_rating": 4.9,
@@ -85,13 +78,6 @@ async def startup_event():
             "price_sats": 1200,
             "endpoint_url": "http://localhost:8002",
             "permissions": {"can_make_external_calls": True},
-            "agent_metadata": {
-                "example_tasks": ["Research AI industry trends 2024", "Find competitors for a new SaaS product"],
-                "task_types": [
-                    {"label": "Industry Analysis", "input_placeholder": "Enter industry name (e.g. AI, Fintech)..."},
-                    {"label": "Competitor Research", "input_placeholder": "Enter product or company name..."}
-                ]
-            },
             "framework": "crewai",
             "verified": False,
             "community_rating": 4.2,
@@ -109,13 +95,6 @@ async def startup_event():
             "price_sats": 800,
             "endpoint_url": "http://localhost:8003",
             "permissions": {"can_read_files": True, "can_write_files": True},
-            "agent_metadata": {
-                "example_tasks": ["Write a generic README.md", "Fix a bug in this python script"],
-                "task_types": [
-                    {"label": "Write Documentation", "input_placeholder": "What should the README cover?"},
-                    {"label": "Debug Code", "input_placeholder": "Paste the error or code here..."}
-                ]
-            },
             "framework": "autogen",
             "verified": True,
             "community_rating": 4.7,

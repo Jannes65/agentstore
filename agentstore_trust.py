@@ -14,7 +14,7 @@ class PermissionScope(BaseModel):
     can_access_env_vars: bool = False
 
 class ExecutionLog(BaseModel):
-    """Logs the results and metadata of an agent execution."""
+    """Logs the results of an agent execution."""
     agent_id: str
     timestamp: str
     input_str: str

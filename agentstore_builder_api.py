@@ -30,7 +30,6 @@ class AgentSubmission(BaseModel):
     price_sats: int
     endpoint_url: str
     permissions: dict = Field(default_factory=dict)
-    agent_metadata: dict = Field(default_factory=dict)
     framework: str
 
 @router.post("/builders/register")
@@ -97,7 +96,6 @@ async def submit_agent(submission: AgentSubmission, db: Session = Depends(get_db
         "price_sats": submission.price_sats,
         "endpoint_url": submission.endpoint_url,
         "permissions": submission.permissions,
-        "agent_metadata": submission.agent_metadata,
         "framework": submission.framework,
         "verified": False,
         "community_rating": 0.0,
