@@ -712,6 +712,12 @@
         let selectedAgentPrice = 0;
         let activeEngineInvoiceRef = null;
 
+        // Reset the active invoice reference when the modal is closed to ensure a fresh session.
+        function resetActiveInvoice() {
+            activeEngineInvoiceRef = null;
+            console.log("Active engineInvoiceRef cleared for the modal session.");
+        }
+
         // Waitlist Form Handling
         const waitlistForm = document.getElementById('waitlistForm');
         const waitlistMessage = document.getElementById('waitlistMessage');
@@ -876,8 +882,16 @@
         verifiedFilter.addEventListener('change', fetchAgents);
         searchInput.addEventListener('input', () => renderAgents(allAgents));
 
-        closeModal.onclick = () => modal.style.display = 'none';
-        window.onclick = (event) => { if (event.target == modal) modal.style.display = 'none'; }
+        closeModal.onclick = () => {
+            modal.style.display = 'none';
+            resetActiveInvoice();
+        };
+        window.onclick = (event) => { 
+            if (event.target == modal) {
+                modal.style.display = 'none';
+                resetActiveInvoice();
+            }
+        }
 
         runAgentBtn.onclick = async () => {
             const userId = userIdInput.value.trim();
@@ -979,7 +993,18 @@
         };
 
         async function verifyPayment() {
-            if (!activeEngineInvoiceRef) return;
+            if (!activeEngineInvoiceRef) {
+                console.error("No active engineInvoiceRef found for status check.");
+                return;
+            }
+
+            console.log(`Checking status for engineInvoiceRef: ${activeEngineInvoiceRef}`);
+
+            const userId = userIdInput.value.trim();
+            if (!userId) {
+                alert('Please enter a Wallet ID first');
+                return;
+            }
 
             checkPaymentBtn.disabled = true;
             checkPaymentBtn.innerText = 'Verifying...';
@@ -991,6 +1016,14 @@
                 const data = await response.json();
 
                 if (data.status === 'paid') {
+                    console.log(`Payment confirmed for ${activeEngineInvoiceRef}. Status: ${data.status}`);
+                    
+                    // Confirm balance update
+                    console.log(`Confirming balance update for userId: ${userId}`);
+                    const balanceResponse = await fetch(`${API_BASE}/payments/balance/${userId}`);
+                    const balanceData = await balanceResponse.json();
+                    console.log(`Balance check result:`, balanceData);
+
                     // Payment successful! Balance credited.
                     depositSection.style.display = 'none';
                     invoiceContainer.style.display = 'none';
@@ -1002,11 +1035,14 @@
                     runAgentBtn.innerText = 'Run Agent';
                     
                     // Auto-retry Run Agent
+                    console.log("Triggering auto-retry of the agent run.");
                     runAgentBtn.click();
                 } else {
+                    console.log(`Payment not yet paid for ${activeEngineInvoiceRef}. Status: ${data.status}`);
                     alert('Payment not yet detected. Status: ' + data.status);
                 }
             } catch (err) {
+                console.error(`Error during payment verification for ${activeEngineInvoiceRef}:`, err);
                 alert('Error checking payment: ' + err.message);
             } finally {
                 checkPaymentBtn.disabled = false;
