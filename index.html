@@ -587,31 +587,49 @@
     <div id="runModal" class="modal">
         <div class="modal-content" style="max-width: 700px;">
             <span class="close" id="closeModal">&times;</span>
-            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
                 <h2 id="modalAgentName" style="margin-bottom: 0;">Run Agent</h2>
                 <span id="modalBadgeCategory" class="badge badge-category">Category</span>
             </div>
             
-            <div id="modalDescription" style="color: #8b949e; margin-bottom: 1.5rem; line-height: 1.5;">
-                Detailed agent description goes here...
+            <div style="margin-bottom: 1.5rem;">
+                <div style="font-weight: bold; color: white; margin-bottom: 0.5rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8b949e;">What this agent does:</div>
+                <div id="modalDescription" style="color: #c9d1d9; line-height: 1.6;">
+                    Detailed agent description goes here...
+                </div>
             </div>
 
-            <div class="permissions-list" id="modalPermissions">
-                <!-- Permissions with icons will be injected here -->
+            <div id="exampleTasksContainer" style="margin-bottom: 1.5rem; display: none;">
+                <div style="font-weight: bold; color: white; margin-bottom: 0.5rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8b949e;">Example tasks:</div>
+                <ul id="modalExampleTasks" style="color: #c9d1d9; padding-left: 1.2rem; margin: 0; line-height: 1.6;">
+                </ul>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <div style="font-weight: bold; color: white; margin-bottom: 0.8rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8b949e;">Is this agent right for me?</div>
+                <div class="permissions-list" id="modalPermissions" style="background: #0d1117; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <!-- Permissions with icons will be injected here -->
+                </div>
             </div>
 
             <div style="background: rgba(247, 147, 26, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(247, 147, 26, 0.2); margin-bottom: 1.5rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
-                    <span style="font-weight: bold; color: white;">Pricing:</span>
+                    <span style="font-weight: bold; color: white;">Cost per run:</span>
                     <span id="modalPrice" style="font-weight: bold; color: #3fb950; font-size: 1.2rem;"></span>
                 </div>
                 <div style="font-size: 0.85rem; color: #8b949e;">* 80% goes directly to the builder</div>
             </div>
 
-            <div style="margin-bottom: 1rem; font-weight: bold; color: white;">Task Input:</div>
-            <textarea id="agentInput" placeholder="Describe what you want this agent to do..."></textarea>
-            <div style="font-size: 0.85rem; color: #8b949e; margin-top: -0.5rem; margin-bottom: 1rem;">
-                Tell the agent what task to perform e.g. 'Summarise this URL' or 'Write a cold email to a CEO'
+            <div id="taskTypeContainer" style="margin-bottom: 1.5rem; display: none;">
+                <div style="font-weight: bold; color: white; margin-bottom: 0.8rem;">Select a task type:</div>
+                <div id="taskButtons" style="display: flex; flex-wrap: wrap; gap: 0.8rem;">
+                    <!-- Task type buttons will be injected here -->
+                </div>
+            </div>
+
+            <div id="specificInputContainer" style="margin-bottom: 1.5rem; display: none;">
+                <div id="specificInputLabel" style="margin-bottom: 0.5rem; font-weight: bold; color: white;">Input:</div>
+                <textarea id="agentInput" style="height: 80px;"></textarea>
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 1rem;">
@@ -662,6 +680,13 @@
         const userIdInput = document.getElementById('userIdInput');
         
         const agentInput = document.getElementById('agentInput');
+        const taskTypeContainer = document.getElementById('taskTypeContainer');
+        const taskButtons = document.getElementById('taskButtons');
+        const specificInputContainer = document.getElementById('specificInputContainer');
+        const specificInputLabel = document.getElementById('specificInputLabel');
+        const exampleTasksContainer = document.getElementById('exampleTasksContainer');
+        const modalExampleTasks = document.getElementById('modalExampleTasks');
+        
         const agentOutputText = document.getElementById('agentOutputText');
         const outputContainer = document.getElementById('outputContainer');
 
@@ -783,6 +808,51 @@
             document.getElementById('modalDescription').innerText = agent.description_long || agent.description_short || "No description provided.";
             document.getElementById('modalPrice').innerText = `${agent.price_sats} SATS`;
             
+            // Example Tasks
+            const metadata = agent.metadata || {};
+            const examples = metadata.example_tasks || [];
+            if (examples.length > 0) {
+                exampleTasksContainer.style.display = 'block';
+                modalExampleTasks.innerHTML = examples.map(task => `<li>${task}</li>`).join('');
+            } else {
+                exampleTasksContainer.style.display = 'none';
+            }
+
+            // Task Types and Structured Options
+            const taskTypes = metadata.task_types || [];
+            taskButtons.innerHTML = '';
+            if (taskTypes.length > 0) {
+                taskTypeContainer.style.display = 'block';
+                taskTypes.forEach(tt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn btn-outline';
+                    btn.style.padding = '0.5rem 1rem';
+                    btn.style.fontSize = '0.9rem';
+                    btn.innerText = tt.label;
+                    btn.onclick = () => {
+                        // Clear previous active states
+                        Array.from(taskButtons.children).forEach(b => b.classList.remove('btn-primary'));
+                        Array.from(taskButtons.children).forEach(b => b.classList.add('btn-outline'));
+                        
+                        btn.classList.remove('btn-outline');
+                        btn.classList.add('btn-primary');
+                        
+                        specificInputContainer.style.display = 'block';
+                        specificInputLabel.innerText = tt.input_label || tt.label + " Input:";
+                        agentInput.placeholder = tt.input_placeholder || "Enter details here...";
+                        agentInput.value = '';
+                        agentInput.focus();
+                    };
+                    taskButtons.appendChild(btn);
+                });
+                specificInputContainer.style.display = 'none'; // Hide until task is selected
+            } else {
+                taskTypeContainer.style.display = 'none';
+                specificInputContainer.style.display = 'block';
+                specificInputLabel.innerText = 'Task Input:';
+                agentInput.placeholder = "Describe what you want this agent to do...";
+            }
+
             // Build Permissions Section
             const perms = agent.permissions || {};
             // Support both old and new field names
@@ -806,6 +876,12 @@
                 </div>
             `;
 
+            // Persistence for Wallet ID
+            if (sessionStorage.getItem('user_id')) {
+                userIdInput.value = sessionStorage.getItem('user_id');
+            }
+            userIdInput.onchange = () => sessionStorage.setItem('user_id', userIdInput.value.trim());
+
             agentInput.value = '';
             agentOutputText.innerText = '';
             outputContainer.style.display = 'none';
@@ -826,14 +902,20 @@
 
         runAgentBtn.onclick = async () => {
             const userId = userIdInput.value.trim();
-            const taskInput = agentInput.value.trim();
+            let taskInput = agentInput.value.trim();
+
+            // If task types exist, prepend the selected task type label for better context
+            const activeTaskBtn = taskButtons.querySelector('.btn-primary');
+            if (activeTaskBtn) {
+                taskInput = `[${activeTaskBtn.innerText}] ${taskInput}`;
+            }
 
             if (!userId) {
-                alert('Please enter a User ID');
+                alert('Please enter a Wallet ID');
                 return;
             }
             if (!taskInput) {
-                alert('Please describe your task');
+                alert('Please provide input for the task');
                 return;
             }
 
