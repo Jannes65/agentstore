@@ -99,6 +99,10 @@ async def submit_agent(submission: AgentSubmission, db: Session = Depends(get_db
 
     save_agent(db, agent_data)
     
+    # Auto-create agent wallet on submission
+    from agentstore_ledger import create_agent_wallet
+    create_agent_wallet(agent_id)
+    
     return {"message": "Agent submitted successfully", "agent_id": agent_id}
 
 @router.get("/builders/{builder_id}")

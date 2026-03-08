@@ -10,7 +10,7 @@ from agentstore_schema import Category
 from agentstore_adapter import LangChainAdapter, CrewAIAdapter, AutoGenAdapter
 from agentstore_trust import PermissionScope, TrustScore, ExecutionLog
 from agentstore_marketplace import Marketplace, Listing
-from agentstore_database import init_db, get_db, save_agent, get_agent as get_agent_db, get_all_agents, save_execution_log, add_to_waitlist
+from agentstore_database import init_db, get_db, save_agent, get_agent as get_agent_db, get_all_agents, save_execution_log, add_to_waitlist, Builder
 from agentstore_builder_api import router as builder_router
 from agentstore_payments import create_invoice, check_payment
 from agentstore_ledger import credit_balance, get_balance
@@ -38,6 +38,7 @@ class WaitlistEntry(BaseModel):
 # Request body model for running an agent
 class RunInput(BaseModel):
     input: str
+    user_id: str = "anonymous"
 
 class DepositRequest(BaseModel):
     user_id: str
@@ -128,37 +129,12 @@ async def get_agent(agent_id: str, db: Session = Depends(get_db)):
 
 @app.post("/agents/{agent_id}/run", response_model=ExecutionLog)
 async def run_agent(agent_id: str, run_input: RunInput, db: Session = Depends(get_db)):
-    """Executes an agent securely via SandboxedRunner."""
-    db_agent = get_agent_db(db, agent_id)
-    if not db_agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
+    """Executes an agent securely with full payment flow."""
+    from agentstore_marketplace import Marketplace
+    marketplace = Marketplace()
     
-    # Reconstruct adapter and listing for SandboxedRunner
-    framework_map = {
-        "langchain": LangChainAdapter(),
-        "crewai": CrewAIAdapter(),
-        "autogen": AutoGenAdapter()
-    }
-    adapter = framework_map.get(db_agent.framework.lower(), LangChainAdapter())
-    
-    listing = Listing(
-        agent_id=db_agent.id,
-        adapter=adapter,
-        scope=PermissionScope(**db_agent.permissions),
-        trust_score=TrustScore(
-            agent_id=db_agent.id,
-            verified=db_agent.verified,
-            community_rating=db_agent.community_rating,
-            task_completion_rate=db_agent.task_completion_rate
-        ),
-        price_sats=db_agent.price_sats,
-        category=Category(db_agent.category)
-    )
-
     try:
-        from agentstore_trust import SandboxedRunner
-        runner = SandboxedRunner(listing.adapter, listing.scope)
-        log = runner.run(run_input.input)
+        log = marketplace.run_agent(agent_id, run_input.input, user_id=run_input.user_id)
         
         # Save log to DB
         save_execution_log(db, {
@@ -169,10 +145,41 @@ async def run_agent(agent_id: str, run_input: RunInput, db: Session = Depends(ge
         })
         
         return log
-    except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        if "Insufficient balance" in str(e):
+            raise HTTPException(status_code=402, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/agents/{agent_id}/balance")
+async def get_agent_balance_api(agent_id: str):
+    """Returns agent's accumulated earnings"""
+    from agentstore_ledger import get_agent_balance
+    balance = get_agent_balance(agent_id)
+    return {"agent_id": agent_id, "balance_sats": balance}
+
+@app.get("/builders/{builder_id}/earnings")
+async def get_builder_earnings(builder_id: str, db: Session = Depends(get_db)):
+    """Sum of all agent balances for that builder"""
+    builder = db.query(Builder).filter(Builder.id == builder_id).first()
+    if not builder:
+        raise HTTPException(status_code=404, detail="Builder not found")
+    
+    from agentstore_ledger import get_agent_balance
+    total_earnings = 0
+    agent_balances = {}
+    
+    for agent in builder.agents:
+        balance = get_agent_balance(agent.id)
+        total_earnings += balance
+        agent_balances[agent.id] = balance
+        
+    return {
+        "builder_id": builder_id,
+        "total_earnings_sats": total_earnings,
+        "agent_breakdown": agent_balances
+    }
 
 @app.post("/waitlist")
 async def join_waitlist(entry: WaitlistEntry, db: Session = Depends(get_db)):

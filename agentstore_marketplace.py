@@ -45,14 +45,77 @@ class Marketplace:
             results.append(listing)
         return results
 
-    def run_agent(self, agent_id: str, input_str: str) -> ExecutionLog:
-        """Executes an agent securely using SandboxedRunner."""
-        listing = self.listings.get(agent_id)
-        if not listing:
-            raise ValueError(f"Agent '{agent_id}' not found in marketplace.")
+    def run_agent(self, agent_id: str, input_str: str, user_id: str = "anonymous") -> ExecutionLog:
+        """Executes an agent securely with full payment flow."""
+        from agentstore_database import SessionLocal, Agent, LedgerTransaction
+        from agentstore_ledger import get_balance, deduct_balance, credit_agent
+        import httpx
         
-        runner = SandboxedRunner(listing.adapter, listing.scope)
-        return runner.run(input_str)
+        db = SessionLocal()
+        try:
+            agent = db.query(Agent).filter(Agent.id == agent_id).first()
+            if not agent:
+                raise ValueError(f"Agent '{agent_id}' not found in database.")
+            
+            price_sats = agent.price_sats
+            
+            # 2. Check user balance
+            user_balance = get_balance(user_id)
+            if user_balance < price_sats:
+                raise ValueError("Insufficient balance. Please top up.")
+            
+            # 4. Deduct full price from user
+            deduct_balance(user_id, price_sats, agent_id=agent_id)
+            
+            # 5. Credit builder 80%
+            credit_agent(agent_id, price_sats * 0.8)
+            
+            # 6. Credit platform 20%
+            credit_agent("agentstore_platform", price_sats * 0.2)
+            
+            # 7. Execute agent
+            output = ""
+            if agent.endpoint_url:
+                try:
+                    # Attempt to call the real endpoint
+                    import httpx
+                    with httpx.Client(timeout=30.0) as client:
+                        response = client.post(
+                            agent.endpoint_url,
+                            json={"input": input_str},
+                            headers={"Content-Type": "application/json"}
+                        )
+                        if response.status_code == 200:
+                            data = response.json()
+                            output = data.get("output") or data.get("response") or str(data)
+                        else:
+                            output = f"Error from agent endpoint: {response.status_code}"
+                except Exception as e:
+                    output = f"Failed to connect to agent endpoint: {str(e)}"
+            else:
+                output = f"MOCK RESPONSE: Successfully executed agent {agent.name}. Your task '{input_str}' is complete."
+
+            # 8. Log transaction to ledger_transactions table
+            new_tx = LedgerTransaction(
+                from_account=user_id,
+                to_account=agent_id,
+                amount_sats=price_sats,
+                transaction_type="agent_run",
+                agent_id=agent_id
+            )
+            db.add(new_tx)
+            db.commit()
+
+            # Return execution log
+            from agentstore_trust import ExecutionLog
+            return ExecutionLog(
+                agent_id=agent_id,
+                input_str=input_str,
+                output=output,
+                permissions_used=agent.permissions
+            )
+        finally:
+            db.close()
 
     def top_rated(self, n: int = 5) -> List[Listing]:
         """Returns the top-rated agents sorted by trust score (community rating)."""

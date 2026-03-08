@@ -611,10 +611,23 @@
             <textarea id="agentInput" placeholder="Describe your task..."></textarea>
             
             <div style="display: flex; flex-direction: column; gap: 1rem;">
-                <button id="connectWalletToRunBtn" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Connect Wallet to Run</button>
-                <div id="comingSoonMessage" style="text-align: center; color: var(--accent-color); font-weight: bold; display: none;">
-                    Lightning wallet integration coming soon. Join the waitlist to be notified.
+                <div id="userIdContainer" style="margin-bottom: 0.5rem;">
+                    <div style="margin-bottom: 0.5rem; font-weight: bold; color: white;">User ID:</div>
+                    <input type="text" id="userIdInput" placeholder="Enter your User ID (e.g. user123)" style="width: 100%; padding: 0.8rem; background: #0d1117; border: 1px solid var(--border-color); color: white; border-radius: 6px;">
                 </div>
+                <button id="runAgentBtn" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Run Agent</button>
+            </div>
+            
+            <!-- Deposit Modal (Embedded) -->
+            <div id="depositSection" style="display: none; margin-top: 1.5rem; padding: 1.5rem; background: rgba(247, 147, 26, 0.1); border: 1px solid var(--accent-color); border-radius: 8px;">
+                <h3 style="color: var(--accent-color); margin-top: 0;">Insufficient Balance</h3>
+                <p>Please deposit SATS to run this agent.</p>
+                <div id="invoiceContainer" style="margin-top: 1rem; display: none;">
+                    <div style="font-weight: bold; color: white; margin-bottom: 0.5rem;">Lightning Invoice:</div>
+                    <textarea id="lightningInvoice" readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 0.8rem; margin-bottom: 1rem;"></textarea>
+                    <button id="checkPaymentBtn" class="btn btn-outline" style="width: 100%;">I have paid</button>
+                </div>
+                <button id="generateInvoiceBtn" class="btn btn-primary" style="width: 100%;">Deposit 5000 SATS</button>
             </div>
             
             <div id="outputContainer" class="output-container">
@@ -633,14 +646,21 @@
         
         const modal = document.getElementById('runModal');
         const closeModal = document.getElementById('closeModal');
-        const connectWalletToRunBtn = document.getElementById('connectWalletToRunBtn');
-        const comingSoonMessage = document.getElementById('comingSoonMessage');
+        const runAgentBtn = document.getElementById('runAgentBtn');
+        const depositSection = document.getElementById('depositSection');
+        const generateInvoiceBtn = document.getElementById('generateInvoiceBtn');
+        const invoiceContainer = document.getElementById('invoiceContainer');
+        const lightningInvoice = document.getElementById('lightningInvoice');
+        const checkPaymentBtn = document.getElementById('checkPaymentBtn');
+        const userIdInput = document.getElementById('userIdInput');
+        
         const agentInput = document.getElementById('agentInput');
         const agentOutputText = document.getElementById('agentOutputText');
         const outputContainer = document.getElementById('outputContainer');
 
         let allAgents = [];
         let selectedAgentId = null;
+        let activeEngineInvoiceRef = null;
 
         // Waitlist Form Handling
         const waitlistForm = document.getElementById('waitlistForm');
@@ -779,8 +799,10 @@
             agentInput.value = '';
             agentOutputText.innerText = '';
             outputContainer.style.display = 'none';
-            comingSoonMessage.style.display = 'none';
-            connectWalletToRunBtn.style.display = 'block';
+            depositSection.style.display = 'none';
+            invoiceContainer.style.display = 'none';
+            runAgentBtn.disabled = false;
+            runAgentBtn.innerText = 'Run Agent';
             modal.style.display = 'block';
         }
 
@@ -792,9 +814,110 @@
         closeModal.onclick = () => modal.style.display = 'none';
         window.onclick = (event) => { if (event.target == modal) modal.style.display = 'none'; }
 
-        connectWalletToRunBtn.onclick = () => {
-            comingSoonMessage.style.display = 'block';
-            connectWalletToRunBtn.style.display = 'none';
+        runAgentBtn.onclick = async () => {
+            const userId = userIdInput.value.trim();
+            const taskInput = agentInput.value.trim();
+
+            if (!userId) {
+                alert('Please enter a User ID');
+                return;
+            }
+            if (!taskInput) {
+                alert('Please describe your task');
+                return;
+            }
+
+            runAgentBtn.disabled = true;
+            runAgentBtn.innerText = 'Running...';
+            agentOutputText.innerText = 'Processing payment and executing agent...';
+            outputContainer.style.display = 'block';
+
+            try {
+                const response = await fetch(`${API_BASE}/agents/${selectedAgentId}/run`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ input: taskInput, user_id: userId })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    agentOutputText.innerText = data.output;
+                    runAgentBtn.innerText = 'Run Again';
+                } else if (response.status === 402) {
+                    // Insufficient Balance
+                    agentOutputText.innerText = 'Error: ' + data.detail;
+                    depositSection.style.display = 'block';
+                    runAgentBtn.innerText = 'Insufficient Balance';
+                } else {
+                    throw new Error(data.detail || 'Failed to run agent');
+                }
+            } catch (err) {
+                agentOutputText.innerText = 'Error: ' + err.message;
+                runAgentBtn.innerText = 'Run Failed';
+            } finally {
+                runAgentBtn.disabled = false;
+            }
+        };
+
+        generateInvoiceBtn.onclick = async () => {
+            const userId = userIdInput.value.trim();
+            if (!userId) {
+                alert('Please enter a User ID first');
+                return;
+            }
+
+            generateInvoiceBtn.disabled = true;
+            generateInvoiceBtn.innerText = 'Generating...';
+
+            try {
+                const response = await fetch(`${API_BASE}/payments/deposit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, amount_sats: 5000 })
+                });
+
+                if (!response.ok) throw new Error('Failed to generate invoice');
+                const data = await response.json();
+
+                activeEngineInvoiceRef = data.engineInvoiceRef;
+                lightningInvoice.value = data.paymentRequest;
+                invoiceContainer.style.display = 'block';
+                generateInvoiceBtn.style.display = 'none';
+            } catch (err) {
+                alert('Error: ' + err.message);
+                generateInvoiceBtn.disabled = false;
+                generateInvoiceBtn.innerText = 'Try Again';
+            }
+        };
+
+        checkPaymentBtn.onclick = async () => {
+            if (!activeEngineInvoiceRef) return;
+
+            checkPaymentBtn.disabled = true;
+            checkPaymentBtn.innerText = 'Verifying...';
+
+            try {
+                const response = await fetch(`${API_BASE}/payments/status/${activeEngineInvoiceRef}`);
+                const data = await response.json();
+
+                if (data.status === 'paid') {
+                    alert('Payment successful! Balance credited.');
+                    depositSection.style.display = 'none';
+                    invoiceContainer.style.display = 'none';
+                    generateInvoiceBtn.style.display = 'block';
+                    generateInvoiceBtn.disabled = false;
+                    generateInvoiceBtn.innerText = 'Deposit More SATS';
+                    runAgentBtn.innerText = 'Run Agent';
+                } else {
+                    alert('Payment not yet detected. Status: ' + data.status);
+                }
+            } catch (err) {
+                alert('Error checking payment: ' + err.message);
+            } finally {
+                checkPaymentBtn.disabled = false;
+                checkPaymentBtn.innerText = 'I have paid';
+            }
         };
 
         // Initial fetch

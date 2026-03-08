@@ -68,6 +68,22 @@ class UserBalance(Base):
     user_id = Column(String, primary_key=True, index=True)
     balance_sats = Column(Integer, default=0)
 
+class AgentBalance(Base):
+    __tablename__ = "agent_balances"
+    agent_id = Column(String, primary_key=True, index=True)
+    balance_sats = Column(Integer, default=0)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class LedgerTransaction(Base):
+    __tablename__ = "ledger_transactions"
+    id = Column(Integer, primary_key=True, index=True)
+    from_account = Column(String, index=True)
+    to_account = Column(String, index=True)
+    amount_sats = Column(Integer)
+    transaction_type = Column(String) # deposit/deduct/credit/agent_run
+    agent_id = Column(String, index=True, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 
