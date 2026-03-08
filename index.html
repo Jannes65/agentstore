@@ -656,11 +656,12 @@
                             <button id="copyInvoiceBtn" class="btn btn-outline" style="padding: 0.5rem; font-size: 0.8rem; min-width: 100px;">Copy Invoice</button>
                         </div>
                         <textarea id="lightningInvoice" readonly style="display: none;"></textarea>
-                        <button id="checkPaymentBtn" class="btn btn-outline" style="width: 100%;">I have paid</button>
+                        <button id="checkPaymentBtn" class="btn btn-outline" style="width: 100%;">I've paid - Try Again</button>
                     </div>
                     
                     <p id="depositIntro">Please deposit SATS to run this agent.</p>
                     <button id="generateInvoiceBtn" class="btn btn-primary" style="width: 100%;">Deposit SATS</button>
+                    <button id="manualCheckBtn" class="btn btn-outline" style="width: 100%; margin-top: 1rem; display: none;">I've paid - Try Again</button>
                 </div>
 
                 <button id="runAgentBtn" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Run Agent</button>
@@ -688,6 +689,7 @@
         const invoiceContainer = document.getElementById('invoiceContainer');
         const lightningInvoice = document.getElementById('lightningInvoice');
         const checkPaymentBtn = document.getElementById('checkPaymentBtn');
+        const manualCheckBtn = document.getElementById('manualCheckBtn');
         const userIdInput = document.getElementById('userIdInput');
         const copyInvoiceBtn = document.getElementById('copyInvoiceBtn');
         const truncatedInvoice = document.getElementById('truncatedInvoice');
@@ -966,6 +968,7 @@
                 });
 
                 invoiceContainer.style.display = 'block';
+                manualCheckBtn.style.display = 'block';
                 document.getElementById('depositIntro').style.display = 'none';
                 generateInvoiceBtn.style.display = 'none';
             } catch (err) {
@@ -975,11 +978,13 @@
             }
         };
 
-        checkPaymentBtn.onclick = async () => {
+        async function verifyPayment() {
             if (!activeEngineInvoiceRef) return;
 
             checkPaymentBtn.disabled = true;
             checkPaymentBtn.innerText = 'Verifying...';
+            manualCheckBtn.disabled = true;
+            manualCheckBtn.innerText = 'Verifying...';
 
             try {
                 const response = await fetch(`${API_BASE}/payments/status/${activeEngineInvoiceRef}`);
@@ -989,6 +994,7 @@
                     alert('Payment successful! Balance credited.');
                     depositSection.style.display = 'none';
                     invoiceContainer.style.display = 'none';
+                    manualCheckBtn.style.display = 'none';
                     document.getElementById('depositIntro').style.display = 'block';
                     generateInvoiceBtn.style.display = 'block';
                     generateInvoiceBtn.disabled = false;
@@ -1004,9 +1010,14 @@
                 alert('Error checking payment: ' + err.message);
             } finally {
                 checkPaymentBtn.disabled = false;
-                checkPaymentBtn.innerText = 'I have paid';
+                checkPaymentBtn.innerText = "I've paid - Try Again";
+                manualCheckBtn.disabled = false;
+                manualCheckBtn.innerText = "I've paid - Try Again";
             }
-        };
+        }
+
+        checkPaymentBtn.onclick = verifyPayment;
+        manualCheckBtn.onclick = verifyPayment;
 
         copyInvoiceBtn.onclick = () => {
             const invoiceString = lightningInvoice.value;
