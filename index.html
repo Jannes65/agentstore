@@ -640,7 +640,7 @@
                     <div style="margin-bottom: 0.5rem; font-weight: bold; color: white;">Your Wallet ID:</div>
                     <input type="text" id="userIdInput" placeholder="Enter your Wallet ID" style="width: 100%; padding: 0.8rem; background: #0d1117; border: 1px solid var(--border-color); color: white; border-radius: 6px;">
                     <div style="font-size: 0.85rem; color: #8b949e; margin-top: 0.5rem;">
-                        Enter your AgentStore wallet ID. Don't have one? <a href="#waitlist" onclick="modal.style.display='none'" style="color: var(--accent-color); text-decoration: none;">Deposit here</a>
+                        Choose any name as your wallet ID e.g. 'jannes_001'
                     </div>
                 </div>
 
@@ -959,12 +959,12 @@
                 // Generate QR Code
                 qrcodeContainer.innerHTML = "";
                 qrcode = new QRCode(qrcodeContainer, {
-                    text: invoiceString,
-                    width: 200,
-                    height: 200,
+                    text: "lightning:" + invoiceString,
+                    width: 256,
+                    height: 256,
                     colorDark : "#000000",
                     colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.H
+                    correctLevel : QRCode.CorrectLevel.L
                 });
 
                 invoiceContainer.style.display = 'block';
@@ -991,7 +991,7 @@
                 const data = await response.json();
 
                 if (data.status === 'paid') {
-                    alert('Payment successful! Balance credited.');
+                    // Payment successful! Balance credited.
                     depositSection.style.display = 'none';
                     invoiceContainer.style.display = 'none';
                     manualCheckBtn.style.display = 'none';
