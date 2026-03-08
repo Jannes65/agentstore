@@ -409,13 +409,15 @@
 
         .modal-content {
             background-color: var(--card-bg);
-            margin: 10% auto;
+            margin: 5% auto;
             padding: 2rem;
             border: 1px solid var(--border-color);
             border-radius: 12px;
             width: 90%;
             max-width: 600px;
             position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
         }
 
         .close {
@@ -641,24 +643,27 @@
                         Enter your AgentStore wallet ID. Don't have one? <a href="#waitlist" onclick="modal.style.display='none'" style="color: var(--accent-color); text-decoration: none;">Deposit here</a>
                     </div>
                 </div>
-                <button id="runAgentBtn" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Run Agent</button>
-            </div>
-            
-            <!-- Deposit Modal (Embedded) -->
-            <div id="depositSection" style="display: none; margin-top: 1.5rem; padding: 1.5rem; background: rgba(247, 147, 26, 0.1); border: 1px solid var(--accent-color); border-radius: 8px;">
-                <h3 style="color: var(--accent-color); margin-top: 0;">Insufficient Balance</h3>
-                <p>Please deposit SATS to run this agent.</p>
-                <div id="invoiceContainer" style="margin-top: 1rem; display: none;">
-                    <div style="font-weight: bold; color: white; margin-bottom: 0.5rem;">Lightning Invoice:</div>
-                    <div id="qrcode" style="background: white; padding: 10px; border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: center;"></div>
-                    <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
-                        <code id="truncatedInvoice" style="background: #000; padding: 0.5rem; border-radius: 4px; flex-grow: 1; font-size: 0.8rem; border: 1px solid var(--border-color); color: #8b949e;"></code>
-                        <button id="copyInvoiceBtn" class="btn btn-outline" style="padding: 0.5rem; font-size: 0.8rem; min-width: 100px;">Copy Invoice</button>
+
+                <!-- Deposit Modal (Embedded) -->
+                <div id="depositSection" style="display: none; padding: 1.5rem; background: rgba(247, 147, 26, 0.1); border: 1px solid var(--accent-color); border-radius: 8px;">
+                    <h3 style="color: var(--accent-color); margin-top: 0;">Insufficient Balance</h3>
+                    
+                    <div id="invoiceContainer" style="margin-top: 1rem; display: none;">
+                        <div style="font-weight: bold; color: white; margin-bottom: 0.5rem;">Lightning Invoice:</div>
+                        <div id="qrcode" style="background: white; padding: 10px; border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: center;"></div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
+                            <code id="truncatedInvoice" style="background: #000; padding: 0.5rem; border-radius: 4px; flex-grow: 1; font-size: 0.8rem; border: 1px solid var(--border-color); color: #8b949e;"></code>
+                            <button id="copyInvoiceBtn" class="btn btn-outline" style="padding: 0.5rem; font-size: 0.8rem; min-width: 100px;">Copy Invoice</button>
+                        </div>
+                        <textarea id="lightningInvoice" readonly style="display: none;"></textarea>
+                        <button id="checkPaymentBtn" class="btn btn-outline" style="width: 100%;">I have paid</button>
                     </div>
-                    <textarea id="lightningInvoice" readonly style="display: none;"></textarea>
-                    <button id="checkPaymentBtn" class="btn btn-outline" style="width: 100%;">I have paid</button>
+                    
+                    <p id="depositIntro">Please deposit SATS to run this agent.</p>
+                    <button id="generateInvoiceBtn" class="btn btn-primary" style="width: 100%;">Deposit SATS</button>
                 </div>
-                <button id="generateInvoiceBtn" class="btn btn-primary" style="width: 100%;">Deposit SATS</button>
+
+                <button id="runAgentBtn" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Run Agent</button>
             </div>
             
             <div id="outputContainer" class="output-container">
@@ -961,6 +966,7 @@
                 });
 
                 invoiceContainer.style.display = 'block';
+                document.getElementById('depositIntro').style.display = 'none';
                 generateInvoiceBtn.style.display = 'none';
             } catch (err) {
                 alert('Error: ' + err.message);
@@ -983,6 +989,7 @@
                     alert('Payment successful! Balance credited.');
                     depositSection.style.display = 'none';
                     invoiceContainer.style.display = 'none';
+                    document.getElementById('depositIntro').style.display = 'block';
                     generateInvoiceBtn.style.display = 'block';
                     generateInvoiceBtn.disabled = false;
                     generateInvoiceBtn.innerText = `Deposit ${selectedAgentPrice} SATS`;
