@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Syne:wght@400..800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
             --bg-color: #0a0a0a;
@@ -649,7 +650,12 @@
                 <p>Please deposit SATS to run this agent.</p>
                 <div id="invoiceContainer" style="margin-top: 1rem; display: none;">
                     <div style="font-weight: bold; color: white; margin-bottom: 0.5rem;">Lightning Invoice:</div>
-                    <textarea id="lightningInvoice" readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 0.8rem; margin-bottom: 1rem;"></textarea>
+                    <div id="qrcode" style="background: white; padding: 10px; border-radius: 8px; margin-bottom: 1rem; display: flex; justify-content: center;"></div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
+                        <code id="truncatedInvoice" style="background: #000; padding: 0.5rem; border-radius: 4px; flex-grow: 1; font-size: 0.8rem; border: 1px solid var(--border-color); color: #8b949e;"></code>
+                        <button id="copyInvoiceBtn" class="btn btn-outline" style="padding: 0.5rem; font-size: 0.8rem; min-width: 100px;">Copy Invoice</button>
+                    </div>
+                    <textarea id="lightningInvoice" readonly style="display: none;"></textarea>
                     <button id="checkPaymentBtn" class="btn btn-outline" style="width: 100%;">I have paid</button>
                 </div>
                 <button id="generateInvoiceBtn" class="btn btn-primary" style="width: 100%;">Deposit SATS</button>
@@ -678,6 +684,10 @@
         const lightningInvoice = document.getElementById('lightningInvoice');
         const checkPaymentBtn = document.getElementById('checkPaymentBtn');
         const userIdInput = document.getElementById('userIdInput');
+        const copyInvoiceBtn = document.getElementById('copyInvoiceBtn');
+        const truncatedInvoice = document.getElementById('truncatedInvoice');
+        const qrcodeContainer = document.getElementById('qrcode');
+        let qrcode = null;
         
         const agentInput = document.getElementById('agentInput');
         const taskTypeContainer = document.getElementById('taskTypeContainer');
@@ -929,7 +939,27 @@
                 const data = await response.json();
 
                 activeEngineInvoiceRef = data.engineInvoiceRef;
-                lightningInvoice.value = data.paymentRequest;
+                const invoiceString = data.paymentRequest;
+                lightningInvoice.value = invoiceString;
+                
+                // Truncate invoice string for display: first 20 and last 10 characters
+                if (invoiceString.length > 35) {
+                    truncatedInvoice.innerText = invoiceString.substring(0, 20) + "..." + invoiceString.substring(invoiceString.length - 10);
+                } else {
+                    truncatedInvoice.innerText = invoiceString;
+                }
+
+                // Generate QR Code
+                qrcodeContainer.innerHTML = "";
+                qrcode = new QRCode(qrcodeContainer, {
+                    text: invoiceString,
+                    width: 200,
+                    height: 200,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+
                 invoiceContainer.style.display = 'block';
                 generateInvoiceBtn.style.display = 'none';
             } catch (err) {
@@ -969,6 +999,17 @@
                 checkPaymentBtn.disabled = false;
                 checkPaymentBtn.innerText = 'I have paid';
             }
+        };
+
+        copyInvoiceBtn.onclick = () => {
+            const invoiceString = lightningInvoice.value;
+            navigator.clipboard.writeText(invoiceString).then(() => {
+                const originalText = copyInvoiceBtn.innerText;
+                copyInvoiceBtn.innerText = "✓ Copied!";
+                setTimeout(() => {
+                    copyInvoiceBtn.innerText = originalText;
+                }, 2000);
+            });
         };
 
         // Initial fetch
