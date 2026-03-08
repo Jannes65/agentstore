@@ -193,6 +193,11 @@
         <h1>Submit Your Agent</h1>
         <form id="submitForm">
             <div class="form-group">
+                <label for="builder_id">Builder ID (Optional)</label>
+                <input type="text" id="builder_id" name="builder_id" class="form-control" placeholder="e.g. alice_01">
+            </div>
+
+            <div class="form-group">
                 <label for="name">Agent Name</label>
                 <input type="text" id="name" name="name" class="form-control" placeholder="e.g. Market Researcher Pro" required>
             </div>
@@ -273,6 +278,15 @@
     </footer>
 
     <script>
+        // Pre-fill builder_id from URL parameter
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const builderId = urlParams.get('builder_id');
+            if (builderId) {
+                document.getElementById('builder_id').value = builderId;
+            }
+        });
+
         // Real-time validation for required fields
         document.querySelectorAll('.form-control[required]').forEach(input => {
             input.addEventListener('blur', () => {
@@ -319,6 +333,7 @@
             });
 
             const formData = {
+                builder_id: formDataRaw.get('builder_id') || null,
                 name: formDataRaw.get('name'),
                 description_short: formDataRaw.get('description_short'),
                 description_long: formDataRaw.get('description_long'),

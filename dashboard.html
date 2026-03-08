@@ -91,7 +91,7 @@
                 <div class="card rounded-xl overflow-hidden">
                     <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center">
                         <h3 class="text-lg font-semibold">Your Agents</h3>
-                        <a href="submit.html" class="text-sm btc-orange hover:underline">+ Submit New</a>
+                        <a id="submitNewAgentBtn" href="submit.html" class="bg-btc-orange hover:bg-orange-600 text-white text-sm font-bold px-4 py-2 rounded-lg transition">+ Submit New Agent</a>
                     </div>
                     <div id="agentsList" class="divide-y divide-slate-700">
                         <!-- Agent items will be injected here -->
@@ -196,6 +196,9 @@
                 document.getElementById('builderName').textContent = data.profile.name;
                 document.getElementById('builderEmail').textContent = data.profile.email;
                 document.getElementById('builderIdDisplay').textContent = data.profile.builder_id;
+                
+                // Update Submit button with builder_id
+                document.getElementById('submitNewAgentBtn').href = `submit.html?builder_id=${currentBuilderId}`;
 
                 // Update Agents
                 const agentsList = document.getElementById('agentsList');

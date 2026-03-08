@@ -62,17 +62,22 @@ async def submit_agent(submission: AgentSubmission, db: Session = Depends(get_db
     
     # Check if builder exists, if not create a default one
     if not get_builder_db(db, builder_id):
+        # Generate a unique email to avoid conflicts if possible
+        import random
+        import string
+        suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
         default_builder = {
             "builder_id": builder_id,
             "name": "Default Builder",
-            "email": f"default_{builder_id}@example.com",
+            "email": f"default_{builder_id}_{suffix}@example.com",
             "bitcoin_address": "default_address"
         }
         try:
             save_builder(db, default_builder)
-        except Exception:
-            # If default builder creation fails (e.g. email conflict), ignore and try to proceed 
-            # or use an existing one if it was just a race condition.
+        except Exception as e:
+            # If it still fails, it's likely the builder_id (id in DB) conflict which shouldn't happen 
+            # because we checked get_builder_db, or some other integrity error.
+            print(f"Error creating default builder: {e}")
             pass
     
     # Auto-generate agent_id if not provided
