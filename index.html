@@ -960,6 +960,7 @@
                 const data = await response.json();
 
                 activeEngineInvoiceRef = data.engineInvoiceRef;
+                console.log('Stored engineInvoiceRef:', activeEngineInvoiceRef);
                 const invoiceString = data.paymentRequest;
                 lightningInvoice.value = invoiceString;
                 
