@@ -278,10 +278,10 @@
     </footer>
 
     <script>
-        // Pre-fill builder_id from URL parameter
+        // Pre-fill builder_id from sessionStorage or URL parameter
         window.addEventListener('load', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            const builderId = urlParams.get('builder_id');
+            const builderId = sessionStorage.getItem('builder_id') || urlParams.get('builder_id');
             if (builderId) {
                 document.getElementById('builder_id').value = builderId;
             }
@@ -366,6 +366,7 @@
                     document.querySelector('h1').textContent = 'Submission Received';
                 }
             } catch (error) {
+                console.error('Fetch error:', error);
                 const errorMessage = error.detail || error.message || JSON.stringify(error);
                 alert('Submission failed: ' + errorMessage);
                 submitBtn.disabled = false;

@@ -145,7 +145,7 @@
 
     <script>
         const API_BASE = 'https://agentstore-production.up.railway.app';
-        let currentBuilderId = localStorage.getItem('builderId');
+        let currentBuilderId = sessionStorage.getItem('builder_id') || localStorage.getItem('builderId');
 
         const loginSection = document.getElementById('loginSection');
         const dashboardContent = document.getElementById('dashboardContent');
@@ -167,12 +167,14 @@
             const id = builderIdInput.value.trim();
             if (id) {
                 currentBuilderId = id;
+                sessionStorage.setItem('builder_id', id);
                 localStorage.setItem('builderId', id);
                 showDashboard();
             }
         };
 
         logoutBtn.onclick = () => {
+            sessionStorage.removeItem('builder_id');
             localStorage.removeItem('builderId');
             currentBuilderId = null;
             location.reload();

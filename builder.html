@@ -449,6 +449,12 @@
                 }
 
                 const result = await response.json();
+                
+                // Save builder_id to sessionStorage for persistence
+                if (result.builder_id) {
+                    sessionStorage.setItem('builder_id', result.builder_id);
+                }
+                
                 formStatus.innerText = "Successfully registered! Welcome to the Agent Economy.";
                 formStatus.style.color = "var(--success-color)";
                 formStatus.style.display = 'block';
