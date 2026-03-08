@@ -39,7 +39,7 @@ class Agent(Base):
     price_sats = Column(Integer)
     endpoint_url = Column(String)
     permissions = Column(JSON)  # Store PermissionScope as JSON
-    metadata = Column(JSON, default=dict) # Example tasks, task types, etc.
+    agent_metadata = Column(JSON, default=dict) # Example tasks, task types, etc.
     framework = Column(String)
     verified = Column(Boolean, default=False)
     community_rating = Column(Float, default=0.0)

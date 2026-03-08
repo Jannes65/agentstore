@@ -809,7 +809,7 @@
             document.getElementById('modalPrice').innerText = `${agent.price_sats} SATS`;
             
             // Example Tasks
-            const metadata = agent.metadata || {};
+            const metadata = agent.agent_metadata || {};
             const examples = metadata.example_tasks || [];
             if (examples.length > 0) {
                 exampleTasksContainer.style.display = 'block';
