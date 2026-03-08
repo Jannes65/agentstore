@@ -42,13 +42,16 @@ async def check_payment(engine_invoice_ref: str):
     api_key = CHATABIT_API_KEY
     logging.warning(f"Auth header: Bearer {api_key[:15] if api_key else 'NONE'}...")
     async with httpx.AsyncClient(timeout=30.0) as client:
+        url = f"{BASE_URL}/invoices/{engine_invoice_ref}"
+        logging.warning(f"Polling status URL: {url}")
         response = await client.get(
-            f"{BASE_URL}/invoices/{engine_invoice_ref}",
+            url,
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             }
         )
+        logging.warning(f"Response: {response.status_code} {response.text}")
         response.raise_for_status()
         data = response.json()
         logging.warning(f"Chatabit status response: {data}")
