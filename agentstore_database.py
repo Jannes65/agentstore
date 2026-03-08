@@ -14,6 +14,15 @@ if DATABASE_URL.startswith("postgresql"):
 else:
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
+# Run migrations before ORM setup
+from sqlalchemy import text
+with engine.connect() as conn:
+    try:
+        conn.execute(text("ALTER TABLE agents RENAME COLUMN metadata TO agent_metadata"))
+        conn.commit()
+    except Exception:
+        pass  # Already renamed or doesn't exist
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

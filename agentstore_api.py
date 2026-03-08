@@ -47,14 +47,6 @@ class DepositRequest(BaseModel):
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and pre-populate with dummy agents if empty."""
-    from sqlalchemy import text
-    from agentstore_database import engine
-    with engine.connect() as conn:
-        try:
-            conn.execute(text("ALTER TABLE agents RENAME COLUMN metadata TO agent_metadata"))
-            conn.commit()
-        except Exception:
-            pass  # Column already renamed or table doesn't exist yet
     init_db()
     db = next(get_db())
     existing_agents = get_all_agents(db)
