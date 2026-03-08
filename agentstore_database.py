@@ -14,15 +14,6 @@ if DATABASE_URL.startswith("postgresql"):
 else:
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
-# Run migrations before ORM setup
-from sqlalchemy import text
-with engine.connect() as conn:
-    try:
-        conn.execute(text("ALTER TABLE agents RENAME COLUMN metadata TO agent_metadata"))
-        conn.commit()
-    except Exception:
-        pass  # Already renamed or doesn't exist
-
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -48,7 +39,7 @@ class Agent(Base):
     price_sats = Column(Integer)
     endpoint_url = Column(String)
     permissions = Column(JSON)  # Store PermissionScope as JSON
-    agent_metadata = Column(JSON, default=dict) # Example tasks, task types, etc.
+    agent_metadata = Column("metadata", JSON, default=dict) # Example tasks, task types, etc.
     framework = Column(String)
     verified = Column(Boolean, default=False)
     community_rating = Column(Float, default=0.0)
