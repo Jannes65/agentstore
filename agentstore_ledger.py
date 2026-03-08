@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from typing import Optional
 from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.orm import Session
 from agentstore_database import Base, SessionLocal, UserBalance, AgentBalance, LedgerTransaction
 
 class Ledger(Base):
