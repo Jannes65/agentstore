@@ -910,8 +910,11 @@
                     invoiceContainer.style.display = 'none';
                     generateInvoiceBtn.style.display = 'block';
                     generateInvoiceBtn.disabled = false;
-                    generateInvoiceBtn.innerText = 'Deposit More SATS';
+                    generateInvoiceBtn.innerText = `Deposit ${selectedAgentPrice} SATS`;
                     runAgentBtn.innerText = 'Run Agent';
+                    
+                    // Auto-retry Run Agent
+                    runAgentBtn.click();
                 } else {
                     alert('Payment not yet detected. Status: ' + data.status);
                 }
