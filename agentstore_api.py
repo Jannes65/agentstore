@@ -224,18 +224,13 @@ async def deposit(req: DepositRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/payments/status/{engine_invoice_ref}")
-async def payment_status(engine_invoice_ref: str):
+async def payment_status(engine_invoice_ref: str, user_id: str, amount_sats: int):
     """Checks payment, if paid credits user balance"""
     try:
         status = await check_payment(engine_invoice_ref)
         if status.get("status") == "paid":
-            # Chatabit returns externalRef which we set to user_id_timestamp
-            external_ref = status.get("externalRef")
-            user_id = external_ref.split("_")[0] if external_ref else None
-            amount_sats = status.get("amountSats")
-            if user_id and amount_sats:
-                credit_balance(user_id, amount_sats)
-                return {"status": "paid", "message": "Balance credited"}
+            credit_balance(user_id, amount_sats)
+            return {"status": "paid", "balance_updated": True}
         return {"status": status.get("status", "pending")}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
