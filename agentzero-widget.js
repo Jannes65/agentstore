@@ -227,11 +227,11 @@ Be concise, friendly, and Bitcoin-native in tone.`;
     }
 
     // 5. Event Listeners
-    bubble.onclick = () => {
-        const isOpening = window.style.display !== 'flex';
-        window.style.display = isOpening ? 'flex' : 'none';
+    document.getElementById('az-bubble').addEventListener('click', function() {
+        document.getElementById('az-window').style.display = 'flex';
+        document.getElementById('az-bubble').style.display = 'none';
         
-        if (isOpening && messages.length === 0) {
+        if (messages.length === 0) {
             let greeting = "👋 Looking for an agent? Tell me what you need and I'll find the best match.";
             if (currentPage === 'builder.html' || currentPage === 'submit.html') {
                 greeting = "👋 Listing an agent? I can help you write a great description and set the right price.";
@@ -239,15 +239,14 @@ Be concise, friendly, and Bitcoin-native in tone.`;
                 greeting = "👋 Want to boost your agent's visibility? I can review your listing and offer tips.";
             }
             appendMessage('agent', greeting);
-            // We don't push greeting to messages array for Claude context as it's just UI, 
-            // but if we want Claude to know what it said:
-            // messages.push({ role: 'assistant', content: greeting });
+            messages.push({ role: 'assistant', content: greeting });
         }
-    };
+    });
 
-    closeBtn.onclick = () => {
-        window.style.display = 'none';
-    };
+    document.getElementById('az-close').addEventListener('click', function() {
+        document.getElementById('az-window').style.display = 'none';
+        document.getElementById('az-bubble').style.display = 'flex';
+    });
 
     sendBtn.onclick = handleSend;
     input.onkeypress = (e) => { if (e.key === 'Enter') handleSend(); };
