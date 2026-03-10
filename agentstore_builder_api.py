@@ -251,7 +251,7 @@ async def delete_agent(agent_id: str, builder_id: str, db: Session = Depends(get
         raise HTTPException(status_code=404, detail="Builder not found")
     
     agent = get_agent(db, agent_id)
-    if not agent or agent.builder_id != builder_id:
+    if not agent or agent.id != agent_id:
         raise HTTPException(status_code=403, detail="Agent does not belong to this builder or not found")
 
     delete_agent_db(db, agent_id)

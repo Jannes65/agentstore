@@ -46,8 +46,13 @@ class DepositRequest(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database."""
+    """Initialize database and perform migrations."""
     init_db()
+    from sqlalchemy import text
+    from agentstore_database import engine
+    with engine.connect() as conn:
+        conn.execute(text("DELETE FROM agents WHERE id IN ('lc_prod_01', 'cr_research_01', 'ag_dev_01')"))
+        conn.commit()
 
 @app.get("/agents")
 async def get_agents(
