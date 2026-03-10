@@ -78,7 +78,6 @@
                         <span id="totalEarnings" class="text-4xl font-bold btc-orange">0</span>
                         <span class="text-slate-400 font-medium">SATS</span>
                     </div>
-                    <div id="totalEarningsUSD" class="text-sm text-slate-400 mt-1">($0.00 USD)</div>
                     <p class="text-xs text-slate-500 mt-2">Available for withdrawal</p>
                     <button id="withdrawBtn" class="w-full mt-6 bg-btc-orange text-white font-bold py-3 rounded-lg shadow-lg shadow-orange-500/20 transition">
                         Withdraw via Lightning
@@ -189,63 +188,26 @@
             await refreshData();
         }
 
-        async function getBTCPrice() {
-            try {
-                const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
-                const data = await response.json();
-                return data.bitcoin.usd;
-            } catch (err) {
-                console.error('Error fetching BTC price:', err);
-                return null;
-            }
-        }
-
         async function refreshData() {
             try {
-                const btcPrice = await getBTCPrice();
-                const builderResponse = await fetch(`${API_BASE}/builders/${currentBuilderId}`);
-                if (!builderResponse.ok) throw new Error('Builder not found');
-                const builderData = await builderResponse.json();
-
-                const earningsResponse = await fetch(`${API_BASE}/builders/${currentBuilderId}/earnings`);
-                const earningsData = earningsResponse.ok ? await earningsResponse.json() : { total_earnings_sats: 0 };
-                const totalSats = earningsData.total_earnings_sats || 0;
+                const response = await fetch(`${API_BASE}/builders/${currentBuilderId}`);
+                if (!response.ok) throw new Error('Builder not found');
+                const data = await response.json();
 
                 // Update Profile
-                document.getElementById('builderName').textContent = builderData.profile.name;
-                document.getElementById('builderEmail').textContent = builderData.profile.email;
-                document.getElementById('builderIdDisplay').textContent = builderData.profile.builder_id;
+                document.getElementById('builderName').textContent = data.profile.name;
+                document.getElementById('builderEmail').textContent = data.profile.email;
+                document.getElementById('builderIdDisplay').textContent = data.profile.builder_id;
                 
-                // Update Earnings
-                document.getElementById('totalEarnings').textContent = totalSats;
-                withdrawAmount.textContent = totalSats;
-                if (btcPrice) {
-                    const usdValue = (totalSats / 100000000) * btcPrice;
-                    document.getElementById('totalEarningsUSD').textContent = `($${usdValue.toFixed(2)} USD)`;
-                }
-
                 // Update Submit button with builder_id
                 document.getElementById('submitNewAgentBtn').href = `submit.html?builder_id=${currentBuilderId}`;
 
                 // Update Agents
                 const agentsList = document.getElementById('agentsList');
-                if (builderData.agents.length > 0) {
-                    const agentItems = await Promise.all(builderData.agents.map(async (agent) => {
-                        let agentBalance = 0;
-                        try {
-                            const balanceResponse = await fetch(`${API_BASE}/agents/${agent.id}/balance`);
-                            const balanceData = await balanceResponse.json();
-                            agentBalance = balanceData.balance_sats || 0;
-                        } catch (e) {
-                            console.error(`Error fetching balance for agent ${agent.id}:`, e);
-                        }
-                        
-                        let agentBalanceUSD = "";
-                        if (btcPrice) {
-                            const usdVal = (agentBalance / 100000000) * btcPrice;
-                            agentBalanceUSD = `<p class="text-xs text-slate-500">$${usdVal.toFixed(2)} USD</p>`;
-                        }
-
+                if (data.agents.length > 0) {
+                    let totalSats = 0;
+                    agentsList.innerHTML = data.agents.map(agent => {
+                        totalSats += agent.balance_sats;
                         return `
                             <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div>
@@ -261,9 +223,8 @@
                                         <p class="font-bold">${agent.price_sats} SATS</p>
                                     </div>
                                     <div class="text-right">
-                                        <p class="text-xs text-slate-500 uppercase">Balance</p>
-                                        <p class="font-bold btc-orange">${agentBalance} SATS</p>
-                                        ${agentBalanceUSD}
+                                        <p class="text-xs text-slate-500 uppercase">Earned</p>
+                                        <p class="font-bold btc-orange">${agent.balance_sats} SATS</p>
                                     </div>
                                     <div class="flex space-x-2">
                                         <button onclick="editPrice('${agent.id}', ${agent.price_sats})" class="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition">
@@ -276,8 +237,9 @@
                                 </div>
                             </div>
                         `;
-                    }));
-                    agentsList.innerHTML = agentItems.join('');
+                    }).join('');
+                    document.getElementById('totalEarnings').textContent = totalSats;
+                    withdrawAmount.textContent = totalSats;
                 }
 
                 // Update Transactions
@@ -377,5 +339,6 @@
             }
         };
     </script>
+    <script src="agentzero-widget.js"></script>
 </body>
 </html>
