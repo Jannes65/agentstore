@@ -591,7 +591,7 @@
         <div class="modal-content" style="max-width: 700px;">
             <span class="close" id="closeModal">&times;</span>
             <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
-                <h2 id="modalAgentName" style="margin-bottom: 0;">Run Agent</h2>
+                <h2 id="modalAgentName" style="margin-bottom: 0;">Use Agent</h2>
                 <span id="modalBadgeCategory" class="badge badge-category">Category</span>
             </div>
             
@@ -630,11 +630,6 @@
                 </div>
             </div>
 
-            <div id="specificInputContainer" style="margin-bottom: 1.5rem; display: none;">
-                <div id="specificInputLabel" style="margin-bottom: 0.5rem; font-weight: bold; color: white;">Input:</div>
-                <textarea id="agentInput" style="height: 80px;"></textarea>
-            </div>
-            
             <div style="display: flex; flex-direction: column; gap: 1rem;">
                 <div id="userIdContainer" style="margin-bottom: 0.5rem;">
                     <div style="margin-bottom: 0.5rem; font-weight: bold; color: white;">Your Wallet ID:</div>
@@ -664,7 +659,7 @@
                     <button id="manualCheckBtn" class="btn btn-outline" style="width: 100%; margin-top: 1rem; display: none;">I've paid - Try Again</button>
                 </div>
 
-                <button id="runAgentBtn" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Run Agent</button>
+                <button id="runAgentBtn" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Use Agent</button>
             </div>
             
             <div id="outputContainer" class="output-container">
@@ -812,7 +807,7 @@
                         </div>
                         <div>
                             <div class="agent-price">${agent.price_sats} SATS</div>
-                            <button class="btn btn-outline" style="width: 100%" onclick="openRunModal('${agentId}')">Run Agent</button>
+                            <button class="btn btn-outline" style="width: 100%" onclick="openRunModal('${agentId}')">Use Agent</button>
                         </div>
                     </div>
                 `;
@@ -857,23 +852,20 @@
             // Reset Input for simplified flow
             taskTypeContainer.style.display = 'none';
             exampleTasksContainer.style.display = 'none';
-            specificInputContainer.style.display = 'block';
-            specificInputLabel.innerText = 'Task Input:';
-            agentInput.placeholder = "Describe what you want this agent to do...";
 
             // Persistence for Wallet ID
             if (sessionStorage.getItem('user_id')) {
                 userIdInput.value = sessionStorage.getItem('user_id');
             }
-            userIdInput.onchange = () => sessionStorage.setItem('user_id', userIdInput.value.trim());
+            // userIdInput.onchange = () => sessionStorage.setItem('user_id', userIdInput.value.trim());
 
-            agentInput.value = '';
+            // agentInput.value = '';
             agentOutputText.innerText = '';
             outputContainer.style.display = 'none';
             depositSection.style.display = 'none';
             invoiceContainer.style.display = 'none';
             runAgentBtn.disabled = false;
-            runAgentBtn.innerText = 'Run Agent';
+            runAgentBtn.innerText = 'Use Agent';
             modal.style.display = 'block';
         }
 
@@ -895,7 +887,7 @@
 
         runAgentBtn.onclick = async () => {
             const userId = userIdInput.value.trim();
-            const taskInput = agentInput.value.trim();
+            const taskInput = "Standard agent run request"; // Input removed from UI
 
             if (!userId) {
                 alert('Please enter a Wallet ID');
@@ -1078,9 +1070,9 @@
         if (savedUserId) {
             userIdInput.value = savedUserId;
         }
-
-        // Save User ID to sessionStorage when changed
-        userIdInput.addEventListener('change', () => {
+            
+        // Ensure userIdInput change listener is always active
+        userIdInput.addEventListener('input', () => {
             sessionStorage.setItem('user_id', userIdInput.value.trim());
         });
     </script>
