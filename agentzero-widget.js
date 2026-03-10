@@ -1,3 +1,4 @@
+document.addEventListener('DOMContentLoaded', function() {
 (function() {
     // 1. CSS for the widget
     const style = document.createElement('style');
@@ -6,7 +7,7 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            z-index: 10000;
+            z-index: 99999;
             font-family: 'DM Sans', sans-serif;
         }
         #az-bubble {
@@ -47,6 +48,7 @@
             flex-direction: column;
             box-shadow: 0 8px 24px rgba(0,0,0,0.5);
             overflow: hidden;
+            z-index: 99999;
         }
         #az-header {
             background-color: #161b22;
@@ -257,3 +259,4 @@ Be concise, friendly, and Bitcoin-native in tone.`;
         bubble.classList.add('pulse');
     }, 10000);
 })();
+});
