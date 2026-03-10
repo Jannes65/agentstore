@@ -51,7 +51,7 @@ async def startup_event():
     from sqlalchemy import text
     from agentstore_database import engine
     with engine.connect() as conn:
-        conn.execute(text("DELETE FROM agents WHERE id IN ('lc_prod_01', 'cr_research_01', 'ag_dev_01')"))
+        conn.execute(text("DELETE FROM agents WHERE id IN ('lc_prod_01', 'crew_res_02', 'ag_dev_03')"))
         conn.commit()
 
 @app.get("/agents")
