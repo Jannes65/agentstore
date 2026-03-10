@@ -7,7 +7,7 @@ from agentstore_schema import Category
 from agentstore_adapter import LangChainAdapter, CrewAIAdapter, AutoGenAdapter, AgentStoreAdapter
 from agentstore_marketplace import Listing
 from agentstore_trust import PermissionScope, TrustScore
-from agentstore_database import get_db, save_builder, get_builder as get_builder_db, save_agent, delete_agent_db
+from agentstore_database import get_db, save_builder, get_builder as get_builder_db, save_agent, delete_agent_db, Builder
 
 # Storage for builders (deprecated, using agentstore_database instead)
 # builders: Dict[str, dict] = {}
@@ -122,7 +122,8 @@ class PriceUpdate(BaseModel):
 @router.get("/builders/{builder_id}")
 async def get_builder(builder_id: str, db: Session = Depends(get_db)):
     """Returns builder profile and their listed agents with detailed stats."""
-    builder = get_builder_db(db, builder_id)
+    # Look up by builder_id column (which is 'id' in the Builder model)
+    builder = db.query(Builder).filter(Builder.id == builder_id).first()
     if not builder:
         raise HTTPException(status_code=404, detail="Builder not found")
     
@@ -163,7 +164,7 @@ async def get_builder(builder_id: str, db: Session = Depends(get_db)):
 @router.post("/builders/{builder_id}/withdraw")
 async def withdraw_earnings(builder_id: str, req: WithdrawalRequest, db: Session = Depends(get_db)):
     """Initiate Lightning payout for all agents owned by the builder."""
-    builder = get_builder_db(db, builder_id)
+    builder = db.query(Builder).filter(Builder.id == builder_id).first()
     if not builder:
         raise HTTPException(status_code=404, detail="Builder not found")
     
@@ -207,7 +208,7 @@ async def withdraw_earnings(builder_id: str, req: WithdrawalRequest, db: Session
 @router.get("/builders/{builder_id}/transactions")
 async def get_builder_transactions(builder_id: str, db: Session = Depends(get_db)):
     """Returns transaction history for all agents owned by the builder."""
-    builder = get_builder_db(db, builder_id)
+    builder = db.query(Builder).filter(Builder.id == builder_id).first()
     if not builder:
         raise HTTPException(status_code=404, detail="Builder not found")
     

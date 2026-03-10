@@ -46,61 +46,8 @@ class DepositRequest(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database and pre-populate with dummy agents if empty."""
+    """Initialize database."""
     init_db()
-    db = next(get_db())
-    existing_agents = get_all_agents(db)
-    if not existing_agents:
-        # Agent 1: LangChain, Productivity, Verified
-        agent1_data = {
-            "id": "lc_prod_01",
-            "name": "LangChain Productivity",
-            "description_short": "Boost your productivity with LangChain.",
-            "description_long": "A versatile LangChain agent for various productivity tasks.",
-            "category": Category.PRODUCTIVITY.value,
-            "price_sats": 500,
-            "endpoint_url": "http://localhost:8001",
-            "permissions": {"can_read_files": True},
-            "framework": "langchain",
-            "verified": True,
-            "community_rating": 4.9,
-            "task_completion_rate": 0.98
-        }
-        save_agent(db, agent1_data)
-
-        # Agent 2: CrewAI, Research, Not Verified
-        agent2_data = {
-            "id": "crew_res_02",
-            "name": "CrewAI Research",
-            "description_short": "Advanced research via CrewAI.",
-            "description_long": "Collaborative agent crew for deep research projects.",
-            "category": Category.RESEARCH.value,
-            "price_sats": 1200,
-            "endpoint_url": "http://localhost:8002",
-            "permissions": {"can_make_external_calls": True},
-            "framework": "crewai",
-            "verified": False,
-            "community_rating": 4.2,
-            "task_completion_rate": 0.85
-        }
-        save_agent(db, agent2_data)
-
-        # Agent 3: AutoGen, Developer Tools, Verified
-        agent3_data = {
-            "id": "ag_dev_03",
-            "name": "AutoGen Developer",
-            "description_short": "Dev tools powered by AutoGen.",
-            "description_long": "Streamline your development workflow with AutoGen agents.",
-            "category": Category.DEVELOPER_TOOLS.value,
-            "price_sats": 800,
-            "endpoint_url": "http://localhost:8003",
-            "permissions": {"can_read_files": True, "can_write_files": True},
-            "framework": "autogen",
-            "verified": True,
-            "community_rating": 4.7,
-            "task_completion_rate": 0.92
-        }
-        save_agent(db, agent3_data)
 
 @app.get("/agents")
 async def get_agents(
