@@ -235,7 +235,7 @@ Be concise, friendly, and Bitcoin-native in tone.`;
         document.getElementById('az-bubble').style.display = 'none';
         
         if (messages.length === 0) {
-            let greeting = "👋 Looking for an agent? Tell me what you need and I'll find the best match.";
+            let greeting = "👋 Hey! I'm AgentZero — your guide to the agent economy. Here's what I can do:\n\n🔍 Help you find the right agent for your needs\n📝 Help you write a perfect agent listing\n🔒 Review your agent's code for security issues (20,000 sats)\n💡 Suggest agent combinations for complex tasks\n💰 Help you price your agent competitively\n⚡ Explain how Lightning payments work on AgentStore\n\nWhat would you like help with today?";
             if (currentPage === 'builder.html' || currentPage === 'submit.html') {
                 greeting = "👋 Listing an agent? I can help you write a great description and set the right price.";
             } else if (currentPage === 'dashboard.html') {
