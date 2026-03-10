@@ -162,7 +162,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let messages = [];
     let usdPerSat = 0.00075; // fallback
     const API_BASE = "https://agentstore-production.up.railway.app";
-    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    const path = (window.location && window.location.pathname) ? window.location.pathname : '';
+    const currentPage = path.split('/').pop() || 'index.html';
 
     // 4. Logic Functions
     async function fetchBTCPrice() {
