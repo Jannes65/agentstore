@@ -34,6 +34,10 @@ def credit_balance(user_id: str, sats: int, agent_id: Optional[str] = None):
         )
         db.add(ledger_entry)
         db.commit()
+        return {"status": "success", "new_balance": user_balance.balance_sats}
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "message": str(e)}
     finally:
         db.close()
 
