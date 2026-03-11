@@ -260,7 +260,10 @@ async def read_balance(user_id: str):
 
 @app.post("/agents/test-endpoint")
 async def test_agent_endpoint(request: Request):
-    body = await request.json()
+    try:
+        body = await request.json()
+    except:
+        body = {}
     task = body.get("task", "no task provided")
     return {
         "status": "success",
