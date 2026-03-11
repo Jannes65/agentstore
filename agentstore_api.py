@@ -10,7 +10,8 @@ from agentstore_schema import Category
 from agentstore_adapter import LangChainAdapter, CrewAIAdapter, AutoGenAdapter
 from agentstore_trust import PermissionScope, TrustScore, ExecutionLog
 from agentstore_marketplace import Marketplace, Listing
-from agentstore_database import init_db, get_db, save_agent, get_agent as get_agent_db, get_all_agents, save_execution_log, add_to_waitlist, Builder
+from sqlalchemy import text
+from agentstore_database import init_db, get_db, save_agent, get_agent as get_agent_db, get_all_agents, save_execution_log, add_to_waitlist, Builder, engine
 from agentstore_builder_api import router as builder_router
 from agentstore_payments import create_invoice, check_payment
 from agentstore_ledger import credit_balance, get_balance
@@ -118,6 +119,11 @@ async def startup_event():
             "task_completion_rate": 1.0
         }
         save_agent(db, agent4_data)
+
+    # Always ensure test_agent_001 has the correct endpoint URL
+    with engine.connect() as conn:
+        conn.execute(text("UPDATE agents SET endpoint_url = 'https://agentstore-production.up.railway.app/agents/test-endpoint' WHERE id = 'test_agent_001'"))
+        conn.commit()
 
 @app.get("/agents")
 async def get_agents(
