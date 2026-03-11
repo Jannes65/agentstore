@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Query, Depends
+from fastapi import FastAPI, HTTPException, Query, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 import uvicorn
@@ -46,13 +46,78 @@ class DepositRequest(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database and perform migrations."""
+    """Initialize database and pre-populate with dummy agents if empty."""
     init_db()
-    from sqlalchemy import text
-    from agentstore_database import engine
-    with engine.connect() as conn:
-        conn.execute(text("DELETE FROM agents WHERE id IN ('lc_prod_01', 'crew_res_02', 'ag_dev_03')"))
-        conn.commit()
+    db = next(get_db())
+    existing_agents = get_all_agents(db)
+    if not existing_agents:
+        # Agent 1: LangChain, Productivity, Verified
+        agent1_data = {
+            "id": "lc_prod_01",
+            "name": "LangChain Productivity",
+            "description_short": "Boost your productivity with LangChain.",
+            "description_long": "A versatile LangChain agent for various productivity tasks.",
+            "category": Category.PRODUCTIVITY.value,
+            "price_sats": 500,
+            "endpoint_url": "http://localhost:8001",
+            "permissions": {"can_read_files": True},
+            "framework": "langchain",
+            "verified": True,
+            "community_rating": 4.9,
+            "task_completion_rate": 0.98
+        }
+        save_agent(db, agent1_data)
+
+        # Agent 2: CrewAI, Research, Not Verified
+        agent2_data = {
+            "id": "crew_res_02",
+            "name": "CrewAI Research",
+            "description_short": "Advanced research via CrewAI.",
+            "description_long": "Collaborative agent crew for deep research projects.",
+            "category": Category.RESEARCH.value,
+            "price_sats": 1200,
+            "endpoint_url": "http://localhost:8002",
+            "permissions": {"can_make_external_calls": True},
+            "framework": "crewai",
+            "verified": False,
+            "community_rating": 4.2,
+            "task_completion_rate": 0.85
+        }
+        save_agent(db, agent2_data)
+
+        # Agent 3: AutoGen, Developer Tools, Verified
+        agent3_data = {
+            "id": "ag_dev_03",
+            "name": "AutoGen Developer",
+            "description_short": "Dev tools powered by AutoGen.",
+            "description_long": "Streamline your development workflow with AutoGen agents.",
+            "category": Category.DEVELOPER_TOOLS.value,
+            "price_sats": 800,
+            "endpoint_url": "http://localhost:8003",
+            "permissions": {"can_read_files": True, "can_write_files": True},
+            "framework": "autogen",
+            "verified": True,
+            "community_rating": 4.7,
+            "task_completion_rate": 0.92
+        }
+        save_agent(db, agent3_data)
+        
+        # Agent 4: Built-in Test Agent
+        agent4_data = {
+            "id": "test_agent_04",
+            "name": "Test Agent",
+            "description_short": "Built-in test agent for verifying functionality.",
+            "description_long": "A simple agent that responds to any task with a confirmation message. Useful for testing and debugging.",
+            "category": Category.PRODUCTIVITY.value,
+            "price_sats": 500,
+            "endpoint_url": "https://agentstore-production.up.railway.app/agents/test-endpoint",
+            "permissions": {},
+            "framework": "builtin",
+            "verified": True,
+            "community_rating": 5.0,
+            "task_completion_rate": 1.0
+        }
+        save_agent(db, agent4_data)
 
 @app.get("/agents")
 async def get_agents(
@@ -192,6 +257,18 @@ async def read_balance(user_id: str):
     """Returns current balance"""
     balance = get_balance(user_id)
     return {"user_id": user_id, "balance_sats": balance}
+
+@app.post("/agents/test-endpoint")
+async def test_agent_endpoint(request: Request):
+    body = await request.json()
+    task = body.get("task", "no task provided")
+    return {
+        "status": "success",
+        "agent": "TestAgent",
+        "result": f"I processed your task: '{task}'. This is a test response from AgentStore's built-in test agent.",
+        "tokens_used": 42,
+        "cost_sats": 500
+    }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
