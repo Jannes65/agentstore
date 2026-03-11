@@ -6,6 +6,27 @@ from agentstore_trust import PermissionScope, TrustScore, ExecutionLog, Sandboxe
 
 from pydantic import BaseModel
 
+import httpx
+
+async def call_agent_endpoint(endpoint_url: str, task: str, user_id: str) -> dict:
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # First attempt — no auth
+            response = await client.post(endpoint_url, json={"task": task, "user_id": user_id})
+            
+            # L402 handling — if 402 Payment Required
+            if response.status_code == 402:
+                return {"status": "error", "result": "L402 payment required — coming soon"}
+            
+            response.raise_for_status()
+            return response.json()
+    except httpx.ConnectError:
+        return {"status": "error", "result": "Could not connect to agent endpoint"}
+    except httpx.TimeoutException:
+        return {"status": "error", "result": "Agent endpoint timed out"}
+    except Exception as e:
+        return {"status": "error", "result": f"Agent error: {str(e)}"}
+
 class Listing(BaseModel):
     """Represents an agent listing in the marketplace."""
     agent_id: str
@@ -45,7 +66,7 @@ class Marketplace:
             results.append(listing)
         return results
 
-    def run_agent(self, agent_id: str, input_str: str, user_id: str = "anonymous") -> ExecutionLog:
+    async def run_agent(self, agent_id: str, input_str: str, user_id: str = "anonymous") -> ExecutionLog:
         """Executes an agent securely with full payment flow."""
         from agentstore_database import SessionLocal, Agent, LedgerTransaction
         from agentstore_ledger import get_balance, deduct_balance, credit_agent
@@ -74,26 +95,12 @@ class Marketplace:
             credit_agent("agentstore_platform", price_sats * 0.2)
             
             # 7. Execute agent
-            output = ""
-            if agent.endpoint_url:
-                try:
-                    # Attempt to call the real endpoint
-                    import httpx
-                    with httpx.Client(timeout=30.0) as client:
-                        response = client.post(
-                            agent.endpoint_url,
-                            json={"input": input_str},
-                            headers={"Content-Type": "application/json"}
-                        )
-                        if response.status_code == 200:
-                            data = response.json()
-                            output = data.get("output") or data.get("response") or str(data)
-                        else:
-                            output = f"Error from agent endpoint: {response.status_code}"
-                except Exception as e:
-                    output = f"Failed to connect to agent endpoint: {str(e)}"
+            agent_response = await call_agent_endpoint(agent.endpoint_url, input_str, user_id)
+            
+            if agent_response.get("status") == "success":
+                output = agent_response.get("result", "Agent finished without output.")
             else:
-                output = f"MOCK RESPONSE: Successfully executed agent {agent.name}. Your task '{input_str}' is complete."
+                output = agent_response.get("result", "Agent encountered an error.")
 
             # 8. Log transaction to ledger_transactions table
             new_tx = LedgerTransaction(
@@ -178,7 +185,8 @@ if __name__ == "__main__":
     # 3. Execute one agent
     print("\n--- Executing 'lc_prod_01' via Marketplace ---")
     try:
-        log = marketplace.run_agent("lc_prod_01", "How can I improve my productivity?")
+        import asyncio
+        log = asyncio.run(marketplace.run_agent("lc_prod_01", "How can I improve my productivity?"))
         print(f"Agent Output: {log.output}")
         print(f"Execution Timestamp: {log.timestamp}")
         print(f"Permissions Used: {log.permissions_used}")

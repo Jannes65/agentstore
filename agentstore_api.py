@@ -151,7 +151,7 @@ async def run_agent(agent_id: str, run_input: RunInput, db: Session = Depends(ge
     marketplace = Marketplace()
     
     try:
-        log = marketplace.run_agent(agent_id, run_input.input, user_id=run_input.user_id)
+        log = await marketplace.run_agent(agent_id, run_input.input, user_id=run_input.user_id)
         
         # Save log to DB
         save_execution_log(db, {
