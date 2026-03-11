@@ -253,7 +253,10 @@ async def payment_status(engine_invoice_ref: str, user_id: str, amount_sats: int
     try:
         status = await check_payment(engine_invoice_ref)
         if status.get("status") == "paid":
-            credit_balance(user_id, amount_sats)
+            import logging
+            logging.warning(f"Crediting {amount_sats} sats to {user_id}")
+            result = credit_balance(user_id, amount_sats)
+            logging.warning(f"Credit result: {result}")
             return {"status": "paid", "balance_updated": True}
         return {"status": status.get("status", "pending")}
     except Exception as e:
