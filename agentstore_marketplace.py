@@ -28,8 +28,6 @@ async def call_agent_endpoint(endpoint_url: str, task: str, user_id: str, user_b
                 lightning_invoice = invoice_match.group(1)
                 macaroon = macaroon_match.group(1) if macaroon_match else ""
                 
-                # Decode invoice to get amount
-                # For now return the invoice for AgentStore to pay from user balance
                 return {
                     "status": "l402_required",
                     "lightning_invoice": lightning_invoice,
@@ -45,6 +43,15 @@ async def call_agent_endpoint(endpoint_url: str, task: str, user_id: str, user_b
         return {"status": "error", "result": "Agent endpoint timed out"}
     except Exception as e:
         return {"status": "error", "result": f"Agent error: {str(e)}"}
+
+async def call_agent_endpoint_with_auth(endpoint_url: str, task: str, user_id: str, headers: dict) -> dict:
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(endpoint_url, json={"task": task, "user_id": user_id}, headers=headers)
+            response.raise_for_status()
+            return {"status": "success", "result": response.json()}
+    except Exception as e:
+        return {"status": "error", "result": f"Agent retry error: {str(e)}"}
 
 class Listing(BaseModel):
     """Represents an agent listing in the marketplace."""
@@ -116,7 +123,29 @@ class Marketplace:
             # 7. Execute agent
             agent_response = await call_agent_endpoint(agent.endpoint_url, input_str, user_id, user_balance)
             
-            if agent_response.get("status") == "success":
+            # Handle L402 automatically
+            if agent_response.get("status") == "l402_required":
+                from agentstore_payments import pay_lightning_invoice
+                lightning_invoice = agent_response.get("lightning_invoice")
+                macaroon = agent_response.get("macaroon")
+                
+                # Pay the L402 invoice from user balance
+                payment_result = await pay_lightning_invoice(lightning_invoice, user_id)
+                if payment_result["status"] != "success":
+                    output = "Insufficient balance for L402 payment"
+                else:
+                    preimage = payment_result.get("preimage")
+                    # Retry the agent endpoint with the L402 Authorization header
+                    headers = {"Authorization": f"L402 {macaroon}:{preimage}"}
+                    retry_response = await call_agent_endpoint_with_auth(agent.endpoint_url, input_str, user_id, headers)
+                    
+                    if retry_response.get("status") == "success":
+                        agent_response = retry_response # Update agent_response for logging
+                        output = agent_response.get("result", "Agent finished without output.")
+                    else:
+                        output = retry_response.get("result", "Agent retry failed.")
+            
+            elif agent_response.get("status") == "success":
                 output = agent_response.get("result", "Agent finished without output.")
             else:
                 output = agent_response.get("result", "Agent encountered an error.")
