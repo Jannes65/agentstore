@@ -279,5 +279,24 @@ async def test_agent_endpoint(request: Request):
         "cost_sats": 500
     }
 
+@app.post("/agents/test-l402-endpoint")
+async def test_l402_endpoint(request: Request):
+    # Check for L402 authorization
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("L402 "):
+        # Return 402 with a fake invoice for testing
+        return Response(
+            status_code=402,
+            headers={
+                "WWW-Authenticate": 'L402 macaroon="test_macaroon_abc123", invoice="lnbc1test"'
+            }
+        )
+    # Authorized — return result
+    return {
+        "status": "success",
+        "agent": "L402TestAgent", 
+        "result": "L402 payment verified! This agent was accessed via Lightning authentication."
+    }
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

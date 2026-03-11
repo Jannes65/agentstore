@@ -7,19 +7,38 @@ from agentstore_trust import PermissionScope, TrustScore, ExecutionLog, Sandboxe
 from pydantic import BaseModel
 
 import httpx
+import re
 
-async def call_agent_endpoint(endpoint_url: str, task: str, user_id: str) -> dict:
+async def call_agent_endpoint(endpoint_url: str, task: str, user_id: str, user_balance_sats: int = 0) -> dict:
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             # First attempt — no auth
             response = await client.post(endpoint_url, json={"task": task, "user_id": user_id})
             
-            # L402 handling — if 402 Payment Required
+            # L402 handling
             if response.status_code == 402:
-                return {"status": "error", "result": "L402 payment required — coming soon"}
+                # Extract Lightning invoice from WWW-Authenticate header
+                auth_header = response.headers.get("WWW-Authenticate", "")
+                invoice_match = re.search(r'invoice="([^"]+)"', auth_header)
+                macaroon_match = re.search(r'macaroon="([^"]+)"', auth_header)
+                
+                if not invoice_match:
+                    return {"status": "error", "result": "L402: No invoice found in 402 response"}
+                
+                lightning_invoice = invoice_match.group(1)
+                macaroon = macaroon_match.group(1) if macaroon_match else ""
+                
+                # Decode invoice to get amount
+                # For now return the invoice for AgentStore to pay from user balance
+                return {
+                    "status": "l402_required",
+                    "lightning_invoice": lightning_invoice,
+                    "macaroon": macaroon,
+                    "result": "L402 payment required"
+                }
             
             response.raise_for_status()
-            return response.json()
+            return {"status": "success", "result": response.json()}
     except httpx.ConnectError:
         return {"status": "error", "result": "Could not connect to agent endpoint"}
     except httpx.TimeoutException:
@@ -95,7 +114,7 @@ class Marketplace:
             credit_agent("agentstore_platform", price_sats * 0.2)
             
             # 7. Execute agent
-            agent_response = await call_agent_endpoint(agent.endpoint_url, input_str, user_id)
+            agent_response = await call_agent_endpoint(agent.endpoint_url, input_str, user_id, user_balance)
             
             if agent_response.get("status") == "success":
                 output = agent_response.get("result", "Agent finished without output.")
