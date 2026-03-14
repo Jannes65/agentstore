@@ -105,15 +105,14 @@ class Marketplace:
                 raise ValueError(f"Agent '{agent_id}' not found in database.")
             
             price_sats = agent.price_sats
-            fee_buffer = 10
-            required_balance = price_sats + fee_buffer
+            required_balance = price_sats
             
             # 2. Check user balance
             user_balance = get_balance(user_id)
             import logging
-            logging.warning(f"Run agent balance check: user={user_id}, balance={user_balance}, required={required_balance} (price={price_sats} + fee={fee_buffer})")
+            logging.warning(f"Run agent balance check: user={user_id}, balance={user_balance}, required={required_balance} SATS")
             if user_balance < required_balance:
-                raise ValueError(f"Insufficient balance. Required {required_balance} SATS ({price_sats} + {fee_buffer} fee buffer).")
+                raise ValueError(f"Insufficient balance. Required {required_balance} SATS")
             
             # 7. Execute agent (Attempt 1 - no payment yet)
             agent_response = await call_agent_endpoint(agent.endpoint_url, input_str, user_id, user_balance)
@@ -132,8 +131,11 @@ class Marketplace:
                     # Credit builder 80%
                     credit_agent(agent_id, price_sats * 0.8)
                     
-                    # Credit platform 20%
-                    credit_agent("agentstore_platform", price_sats * 0.2)
+                    # Credit platform 18%
+                    credit_agent("agentstore_platform", price_sats * 0.18)
+                    
+                    # Credit fee reserve 2%
+                    credit_agent("agentstore_fees", price_sats * 0.02)
                     
                     preimage = payment_result.get("preimage")
                     # Retry the agent endpoint with the L402 Authorization header
@@ -153,8 +155,11 @@ class Marketplace:
                 # Credit builder 80%
                 credit_agent(agent_id, price_sats * 0.8)
                 
-                # Credit platform 20%
-                credit_agent("agentstore_platform", price_sats * 0.2)
+                # Credit platform 18%
+                credit_agent("agentstore_platform", price_sats * 0.18)
+                
+                # Credit fee reserve 2%
+                credit_agent("agentstore_fees", price_sats * 0.02)
                 
                 output = agent_response.get("result", "Agent finished without output.")
             else:

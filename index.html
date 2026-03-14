@@ -820,7 +820,7 @@
                             </p>
                         </div>
                         <div>
-                            <div class="agent-price">${agent.price_sats} SATS (+ ~10 SATS network fee) (~$${(agent.price_sats * usdPerSat).toFixed(2)})</div>
+                            <div class="agent-price">${agent.price_sats} SATS (~$${(agent.price_sats * usdPerSat).toFixed(2)})</div>
                             <button class="btn btn-outline" style="width: 100%" onclick="openRunModal('${agentId}')">Use Agent</button>
                         </div>
                     </div>
@@ -834,11 +834,11 @@
 
             selectedAgentId = agentId;
             selectedAgentPrice = agent.price_sats || 0;
-            document.getElementById('generateInvoiceBtn').innerText = `Deposit ${selectedAgentPrice + 10} SATS`;
+            document.getElementById('generateInvoiceBtn').innerText = `Deposit ${selectedAgentPrice} SATS`;
             document.getElementById('modalAgentName').innerText = agent.name || agentId;
             document.getElementById('modalBadgeCategory').innerText = agent.category;
             document.getElementById('modalDescription').innerText = agent.description_long || agent.description_short || "No description provided.";
-            document.getElementById('modalPrice').innerText = `${agent.price_sats} SATS + ~10 SATS network fee (~$${(agent.price_sats * usdPerSat).toFixed(2)})`;
+            document.getElementById('modalPrice').innerText = `${agent.price_sats} SATS (~$${(agent.price_sats * usdPerSat).toFixed(2)})`;
             
             // Build Permissions Section
             const perms = agent.permissions || {};
