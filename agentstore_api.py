@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Query, Depends, Request
+from fastapi.responses import JSONResponse
 from starlette.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
@@ -123,7 +124,7 @@ async def startup_event():
 
     # Always ensure test_agent_001 has the correct endpoint URL
     with engine.connect() as conn:
-        conn.execute(text("UPDATE agents SET endpoint_url = 'https://agentstore-production.up.railway.app/agents/test-l402-endpoint' WHERE id = 'test_agent_001'"))
+        conn.execute(text("UPDATE agents SET endpoint_url = 'https://agentstore-production.up.railway.app/agents/test-endpoint' WHERE id = 'test_agent_001'"))
         conn.commit()
 
 @app.get("/agents")
@@ -151,30 +152,18 @@ async def get_agent(agent_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Agent listing not found")
     return agent
 
-@app.post("/agents/{agent_id}/run", response_model=ExecutionLog)
-async def run_agent(agent_id: str, run_input: RunInput, db: Session = Depends(get_db)):
-    """Executes an agent securely with full payment flow."""
-    from agentstore_marketplace import Marketplace
-    marketplace = Marketplace()
+@app.post("/agents/{agent_id}/run")
+async def run_agent_endpoint(agent_id: str, request: Request):
+    body = await request.json()
+    user_id = body.get("user_id", "")
+    task = body.get("task", "run")
     
-    try:
-        log = await marketplace.run_agent(agent_id, run_input.input, user_id=run_input.user_id)
-        
-        # Save log to DB
-        save_execution_log(db, {
-            "agent_id": agent_id,
-            "input_str": run_input.input,
-            "output": log.output,
-            "permissions_used": log.permissions_used
-        })
-        
-        return log
-    except ValueError as e:
-        if "Insufficient balance" in str(e):
-            raise HTTPException(status_code=402, detail=str(e))
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    result = await marketplace.run_agent(agent_id, user_id, task)
+    
+    if result["status"] == "payment_required":
+        return JSONResponse(status_code=402, content=result)
+    
+    return result
 
 @app.get("/agents/{agent_id}/balance")
 async def get_agent_balance_api(agent_id: str):
