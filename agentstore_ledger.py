@@ -129,3 +129,13 @@ def create_agent_wallet(agent_id: str):
             db.commit()
     finally:
         db.close()
+
+def reset_user_balance(user_id: str):
+    db = SessionLocal()
+    try:
+        balance = db.query(UserBalance).filter(UserBalance.user_id == user_id).first()
+        if balance:
+            balance.balance_sats = 0
+            db.commit()
+    finally:
+        db.close()

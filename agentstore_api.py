@@ -294,5 +294,11 @@ async def test_l402_endpoint(request: Request):
         "result": "L402 payment verified! This agent was accessed via Lightning authentication."
     }
 
+@app.post("/admin/reset-balance/{user_id}")
+async def reset_balance(user_id: str):
+    from agentstore_ledger import reset_user_balance
+    reset_user_balance(user_id)
+    return {"status": "reset", "user_id": user_id}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
