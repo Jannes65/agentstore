@@ -764,20 +764,22 @@
 
         // Fetch agents on load
         async function fetchAgents() {
+            console.log('fetchAgents called');
             try {
-                await fetchBTCPrice();
                 const category = categoryFilter.value;
                 const verifiedOnly = verifiedFilter.checked;
                 let url = `${API_BASE}/agents?verified_only=${verifiedOnly}`;
-                if (category && category !== 'All') url += `&category=${category}`;
-
+                if (category && category !== 'All' && category !== '') url += `&category=${category}`;
+                console.log('Fetching from URL:', url);
                 const response = await fetch(url);
-                if (!response.ok) throw new Error("Failed to fetch agents");
-                allAgents = await response.json();
-                renderAgents(allAgents);
-            } catch (err) {
-                console.error("fetchAgents error:", err);
-                agentGrid.innerHTML = `<div class="loading" style="color: var(--danger-color)">Error: ${err.message}. Make sure agentstore_api.py is running.</div>`;
+                console.log('Response status:', response.status);
+                const agents = await response.json();
+                console.log('Agents received:', agents.length);
+                allAgents = agents;
+                renderAgents(agents);
+            } catch(err) {
+                console.error('fetchAgents error:', err);
+                agentGrid.innerHTML = '<div style="color:red">Error loading agents: ' + err.message + '</div>';
             }
         }
 
