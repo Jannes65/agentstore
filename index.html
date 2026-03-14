@@ -764,18 +764,19 @@
 
         // Fetch agents on load
         async function fetchAgents() {
-            await fetchBTCPrice();
             try {
+                await fetchBTCPrice();
                 const category = categoryFilter.value;
                 const verifiedOnly = verifiedFilter.checked;
                 let url = `${API_BASE}/agents?verified_only=${verifiedOnly}`;
-                if (category) url += `&category=${category}`;
+                if (category && category !== 'All') url += `&category=${category}`;
 
                 const response = await fetch(url);
                 if (!response.ok) throw new Error("Failed to fetch agents");
                 allAgents = await response.json();
                 renderAgents(allAgents);
             } catch (err) {
+                console.error("fetchAgents error:", err);
                 agentGrid.innerHTML = `<div class="loading" style="color: var(--danger-color)">Error: ${err.message}. Make sure agentstore_api.py is running.</div>`;
             }
         }
@@ -1155,8 +1156,8 @@
             });
         };
 
-        // Initial fetch
-        fetchAgents();
+        // Initial fetch handled by DOMContentLoaded
+        // fetchAgents();
 
         // Load User ID from sessionStorage
         const savedUserId = sessionStorage.getItem('user_id');
@@ -1170,7 +1171,11 @@
         });
 
         // Restore pending invoice on load
-        window.addEventListener('load', async () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Priority 1: Fetch BTC price and Agents
+            await fetchAgents();
+
+            // Priority 2: Restore pending invoice
             const pendingRef = localStorage.getItem('pendingInvoiceRef');
             const pendingAmount = localStorage.getItem('pendingInvoiceAmount');
             const pendingUser = localStorage.getItem('pendingInvoiceUser');
