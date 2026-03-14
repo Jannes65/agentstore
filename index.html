@@ -1173,6 +1173,7 @@
         // Restore pending invoice on load
         document.addEventListener('DOMContentLoaded', async () => {
             // Priority 1: Fetch BTC price and Agents
+            await fetchBTCPrice();
             await fetchAgents();
 
             // Priority 2: Restore pending invoice
@@ -1182,6 +1183,7 @@
             const pendingAgent = localStorage.getItem('pendingAgentId');
 
             if (pendingRef && pendingAmount && pendingUser && pendingAgent) {
+                // Restore session variables
                 activeEngineInvoiceRef = pendingRef;
                 selectedAgentPrice = parseInt(pendingAmount);
                 selectedAgentId = pendingAgent;
@@ -1192,6 +1194,9 @@
                 depositSection.style.display = 'block';
                 document.getElementById('depositIntro').style.display = 'none';
                 document.getElementById('pendingBanner').style.display = 'block';
+                
+                // Open the modal for the pending agent (ensure it's rendered)
+                openRunModal(pendingAgent);
                 
                 // Regenerate invoice UI (calling generateInvoice again to get QR)
                 await generateInvoice(pendingAgent, pendingUser, selectedAgentPrice);
