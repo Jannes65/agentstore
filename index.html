@@ -975,7 +975,11 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    agentOutputText.innerText = data.output || data.result;
+                    let output = data.result;
+                    if (typeof output === 'object') {
+                        output = output.result || JSON.stringify(output, null, 2);
+                    }
+                    document.getElementById('agentOutputText').innerText = output || 'Agent completed successfully';
                     runAgentBtn.innerText = 'Run Again';
                 } else if (data.status === 'payment_required' || response.status === 402) {
                     // Insufficient Balance
