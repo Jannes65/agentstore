@@ -938,7 +938,18 @@
                 });
 
                 invoiceContainer.style.display = 'block';
-                manualCheckBtn.style.display = 'block';
+                // Only add the manual check button once
+                if (!document.getElementById('retryPaymentBtn')) {
+                    const btn = document.createElement('button');
+                    btn.id = 'retryPaymentBtn';
+                    btn.className = 'btn btn-outline';
+                    btn.style.width = '100%';
+                    btn.style.marginTop = '1rem';
+                    btn.innerText = "I've paid - Try Again";
+                    btn.onclick = verifyPayment;
+                    invoiceContainer.appendChild(btn);
+                }
+                manualCheckBtn.style.display = 'none'; // Ensure manualCheckBtn is hidden if we use retryPaymentBtn
                 document.getElementById('depositIntro').style.display = 'none';
                 generateInvoiceBtn.style.display = 'none';
             } catch (err) {
@@ -1012,6 +1023,20 @@
             await generateInvoice(selectedAgentId, userId, selectedAgentPrice);
         };
 
+        async function pollPaymentStatus(engineInvoiceRef, userId, amountSats, maxAttempts = 10) {
+            for (let i = 0; i < maxAttempts; i++) {
+                await new Promise(r => setTimeout(r, 3000));
+                try {
+                    const res = await fetch(`${API_BASE}/payments/status/${engineInvoiceRef}?user_id=${userId}&amount_sats=${amountSats}`);
+                    const data = await res.json();
+                    if (data.status === 'paid') return true;
+                } catch (e) {
+                    console.error("Polling error:", e);
+                }
+            }
+            return false;
+        }
+
         async function verifyPayment() {
             if (!activeEngineInvoiceRef) {
                 console.error("No active engineInvoiceRef found for status check.");
@@ -1030,16 +1055,17 @@
             checkPaymentBtn.innerText = 'Verifying...';
             manualCheckBtn.disabled = true;
             manualCheckBtn.innerText = 'Verifying...';
+            const retryPaymentBtn = document.getElementById('retryPaymentBtn');
+            if (retryPaymentBtn) {
+                retryPaymentBtn.disabled = true;
+                retryPaymentBtn.innerText = 'Verifying...';
+            }
 
             try {
-                // Wait 3 seconds before calling status endpoint
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                
-                const response = await fetch(`${API_BASE}/payments/status/${activeEngineInvoiceRef}?user_id=${userId}&amount_sats=${selectedAgentPrice}`);
-                const data = await response.json();
+                const isPaid = await pollPaymentStatus(activeEngineInvoiceRef, userId, selectedAgentPrice);
 
-                if (data.status === 'paid') {
-                    console.log(`Payment confirmed for ${activeEngineInvoiceRef}. Status: ${data.status}`);
+                if (isPaid) {
+                    console.log(`Payment confirmed for ${activeEngineInvoiceRef}.`);
                     
                     // Confirm balance update
                     console.log(`Confirming balance update for userId: ${userId}`);
@@ -1062,8 +1088,8 @@
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     await runAgent(selectedAgentId, userId);
                 } else {
-                    console.log(`Payment not yet paid for ${activeEngineInvoiceRef}. Status: ${data.status}`);
-                    alert('Payment not yet detected. Status: ' + data.status);
+                    console.log(`Payment not detected after polling for ${activeEngineInvoiceRef}.`);
+                    alert('Payment not yet detected. Please wait a moment and try again.');
                 }
             } catch (err) {
                 console.error(`Error during payment verification for ${activeEngineInvoiceRef}:`, err);
@@ -1073,6 +1099,11 @@
                 checkPaymentBtn.innerText = "I've paid - Try Again";
                 manualCheckBtn.disabled = false;
                 manualCheckBtn.innerText = "I've paid - Try Again";
+                const retryPaymentBtn = document.getElementById('retryPaymentBtn');
+                if (retryPaymentBtn) {
+                    retryPaymentBtn.disabled = false;
+                    retryPaymentBtn.innerText = "I've paid - Try Again";
+                }
             }
         }
 
