@@ -900,8 +900,7 @@
             }
         }
 
-        runAgentBtn.onclick = async () => {
-            const userId = userIdInput.value.trim();
+        async function runAgent(agentId, userId) {
             const taskInput = "run";
 
             if (!userId) {
@@ -919,7 +918,7 @@
             outputContainer.style.display = 'block';
 
             try {
-                const response = await fetch(`${API_BASE}/agents/${selectedAgentId}/run`, {
+                const response = await fetch(`${API_BASE}/agents/${agentId}/run`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ input: taskInput, user_id: userId })
@@ -944,6 +943,11 @@
             } finally {
                 runAgentBtn.disabled = false;
             }
+        }
+
+        runAgentBtn.onclick = async () => {
+            const userId = userIdInput.value.trim();
+            await runAgent(selectedAgentId, userId);
         };
 
         generateInvoiceBtn.onclick = async () => {
@@ -1047,7 +1051,8 @@
                     
                     // Auto-retry Run Agent
                     console.log("Triggering auto-retry of the agent run.");
-                    runAgentBtn.click();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await runAgent(selectedAgentId, userId);
                 } else {
                     console.log(`Payment not yet paid for ${activeEngineInvoiceRef}. Status: ${data.status}`);
                     alert('Payment not yet detected. Status: ' + data.status);

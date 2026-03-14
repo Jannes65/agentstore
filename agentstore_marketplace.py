@@ -108,6 +108,8 @@ class Marketplace:
             
             # 2. Check user balance
             user_balance = get_balance(user_id)
+            import logging
+            logging.warning(f"Run agent balance check: user={user_id}, balance={user_balance}, required={price_sats}")
             if user_balance < price_sats:
                 raise ValueError("Insufficient balance. Please top up.")
             
