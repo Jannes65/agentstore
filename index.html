@@ -1031,7 +1031,7 @@
                 // Wait 3 seconds before calling status endpoint
                 await new Promise(resolve => setTimeout(resolve, 3000));
                 
-                const response = await fetch(`${API_BASE}/payments/status/${activeEngineInvoiceRef}?user_id=${userId}&amount_sats=${selectedAgentPrice + 10}`);
+                const response = await fetch(`${API_BASE}/payments/status/${activeEngineInvoiceRef}?user_id=${userId}&amount_sats=${selectedAgentPrice}`);
                 const data = await response.json();
 
                 if (data.status === 'paid') {
@@ -1050,7 +1050,7 @@
                     document.getElementById('depositIntro').style.display = 'block';
                     generateInvoiceBtn.style.display = 'block';
                     generateInvoiceBtn.disabled = false;
-                    generateInvoiceBtn.innerText = `Deposit ${selectedAgentPrice + 10} SATS`;
+                    generateInvoiceBtn.innerText = `Deposit ${selectedAgentPrice} SATS`;
                     runAgentBtn.innerText = 'Use Agent';
                     
                     // Auto-retry Run Agent
