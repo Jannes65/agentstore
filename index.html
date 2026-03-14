@@ -1144,12 +1144,8 @@
             }
         }
 
-        if (checkPaymentBtn) checkPaymentBtn.onclick = verifyPayment;
-        
-        const manualCheckBtn = document.getElementById('manualCheckBtn');
         if (manualCheckBtn) manualCheckBtn.onclick = verifyPayment;
 
-        const copyInvoiceBtn = document.getElementById('copyInvoiceBtn');
         if (copyInvoiceBtn) {
             copyInvoiceBtn.onclick = () => {
                 const invoiceString = lightningInvoice.value;
