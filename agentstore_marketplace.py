@@ -105,13 +105,15 @@ class Marketplace:
                 raise ValueError(f"Agent '{agent_id}' not found in database.")
             
             price_sats = agent.price_sats
+            fee_buffer = 10
+            required_balance = price_sats + fee_buffer
             
             # 2. Check user balance
             user_balance = get_balance(user_id)
             import logging
-            logging.warning(f"Run agent balance check: user={user_id}, balance={user_balance}, required={price_sats}")
-            if user_balance < price_sats:
-                raise ValueError("Insufficient balance. Please top up.")
+            logging.warning(f"Run agent balance check: user={user_id}, balance={user_balance}, required={required_balance} (price={price_sats} + fee={fee_buffer})")
+            if user_balance < required_balance:
+                raise ValueError(f"Insufficient balance. Required {required_balance} SATS ({price_sats} + {fee_buffer} fee buffer).")
             
             # 7. Execute agent (Attempt 1 - no payment yet)
             agent_response = await call_agent_endpoint(agent.endpoint_url, input_str, user_id, user_balance)
