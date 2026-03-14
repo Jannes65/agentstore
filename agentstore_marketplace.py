@@ -113,16 +113,7 @@ class Marketplace:
             if user_balance < price_sats:
                 raise ValueError("Insufficient balance. Please top up.")
             
-            # 4. Deduct full price from user
-            deduct_balance(user_id, price_sats, agent_id=agent_id)
-            
-            # 5. Credit builder 80%
-            credit_agent(agent_id, price_sats * 0.8)
-            
-            # 6. Credit platform 20%
-            credit_agent("agentstore_platform", price_sats * 0.2)
-            
-            # 7. Execute agent
+            # 7. Execute agent (Attempt 1 - no payment yet)
             agent_response = await call_agent_endpoint(agent.endpoint_url, input_str, user_id, user_balance)
             
             # Handle L402 automatically
@@ -131,17 +122,17 @@ class Marketplace:
                 lightning_invoice = agent_response.get("lightning_invoice")
                 macaroon = agent_response.get("macaroon")
                 
-                # Pay the L402 invoice from user balance
-                # Note: For now we need to decide how to get amount_sats for the L402 invoice.
-                # Assuming the marketplace knows or it's a fixed test amount for now if not decoded.
-                # The issue description for pay_lightning_invoice added amount_sats parameter.
-                # We'll use a placeholder 500 sats if it's the test agent, or extract if possible.
-                # Looking at previous issue, the test agent cost is 500 sats.
-                l402_price = 500 
-                payment_result = await pay_lightning_invoice(lightning_invoice, user_id, l402_price)
+                # Pay the L402 invoice from user balance (This IS the agent run payment)
+                payment_result = await pay_lightning_invoice(lightning_invoice, user_id, price_sats)
                 if payment_result["status"] != "success":
                     output = "Insufficient balance for L402 payment"
                 else:
+                    # Credit builder 80%
+                    credit_agent(agent_id, price_sats * 0.8)
+                    
+                    # Credit platform 20%
+                    credit_agent("agentstore_platform", price_sats * 0.2)
+                    
                     preimage = payment_result.get("preimage")
                     # Retry the agent endpoint with the L402 Authorization header
                     headers = {"Authorization": f"L402 {macaroon}:{preimage}"}
@@ -154,20 +145,31 @@ class Marketplace:
                         output = retry_response.get("result", "Agent retry failed.")
             
             elif agent_response.get("status") == "success":
+                # Deduct price from user (for direct success agents)
+                deduct_balance(user_id, price_sats, agent_id=agent_id)
+                
+                # Credit builder 80%
+                credit_agent(agent_id, price_sats * 0.8)
+                
+                # Credit platform 20%
+                credit_agent("agentstore_platform", price_sats * 0.2)
+                
                 output = agent_response.get("result", "Agent finished without output.")
             else:
                 output = agent_response.get("result", "Agent encountered an error.")
 
             # 8. Log transaction to ledger_transactions table
-            new_tx = LedgerTransaction(
-                from_account=user_id,
-                to_account=agent_id,
-                amount_sats=price_sats,
-                transaction_type="agent_run",
-                agent_id=agent_id
-            )
-            db.add(new_tx)
-            db.commit()
+            # Only log if output was successfully obtained (either via L402 or direct success)
+            if agent_response.get("status") == "success":
+                new_tx = LedgerTransaction(
+                    from_account=user_id,
+                    to_account=agent_id,
+                    amount_sats=price_sats,
+                    transaction_type="agent_run",
+                    agent_id=agent_id
+                )
+                db.add(new_tx)
+                db.commit()
 
             # Return execution log
             from agentstore_trust import ExecutionLog
