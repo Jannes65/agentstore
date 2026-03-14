@@ -16,36 +16,43 @@ class Ledger(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 def credit_balance(user_id: str, amount_sats: int) -> dict:
-    engine = create_engine(DATABASE_URL)
-    with engine.connect() as conn:
-        # Check if user exists
-        result = conn.execute(text("SELECT balance_sats FROM user_balances WHERE user_id = :uid"), {"uid": user_id}).fetchone()
-        if result:
-            new_balance = result[0] + amount_sats
-            conn.execute(text("UPDATE user_balances SET balance_sats = :bal WHERE user_id = :uid"), {"bal": new_balance, "uid": user_id})
+    db = SessionLocal()
+    try:
+        balance = db.query(UserBalance).filter(UserBalance.user_id == user_id).first()
+        if balance:
+            balance.balance_sats += amount_sats
         else:
-            new_balance = amount_sats
-            conn.execute(text("INSERT INTO user_balances (user_id, balance_sats) VALUES (:uid, :bal)"), {"uid": user_id, "bal": new_balance})
-        conn.commit()
-    return {"status": "success", "new_balance": new_balance}
+            balance = UserBalance(user_id=user_id, balance_sats=amount_sats)
+            db.add(balance)
+        db.commit()
+        db.refresh(balance)
+        return {"status": "success", "new_balance": balance.balance_sats}
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "message": str(e)}
+    finally:
+        db.close()
 
 def deduct_balance(user_id: str, sats: int):
-    engine = create_engine(DATABASE_URL)
-    with engine.connect() as conn:
-        result = conn.execute(text("SELECT balance_sats FROM user_balances WHERE user_id = :uid"), {"uid": user_id}).fetchone()
-        if not result or result[0] < sats:
+    db = SessionLocal()
+    try:
+        balance = db.query(UserBalance).filter(UserBalance.user_id == user_id).first()
+        if not balance or balance.balance_sats < sats:
             raise ValueError("Insufficient balance")
         
-        new_balance = result[0] - sats
-        conn.execute(text("UPDATE user_balances SET balance_sats = :bal WHERE user_id = :uid"), {"bal": new_balance, "uid": user_id})
-        conn.commit()
+        balance.balance_sats -= sats
+        db.commit()
+    finally:
+        db.close()
     return True
 
 def get_balance(user_id: str) -> int:
-    engine = create_engine(DATABASE_URL)
-    with engine.connect() as conn:
-        result = conn.execute(text("SELECT balance_sats FROM user_balances WHERE user_id = :uid"), {"uid": user_id}).fetchone()
-        return result[0] if result else 0
+    db = SessionLocal()
+    try:
+        balance = db.query(UserBalance).filter(UserBalance.user_id == user_id).first()
+        return balance.balance_sats if balance else 0
+    finally:
+        db.close()
 
 def get_agent_balance(agent_id: str) -> int:
     db = SessionLocal()
