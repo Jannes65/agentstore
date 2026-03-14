@@ -660,6 +660,9 @@
                     </div>
                     
                     <p id="depositIntro">Please deposit SATS to run this agent.</p>
+                    <div id="pendingBanner" style="display: none; padding: 0.8rem; background: rgba(247, 147, 26, 0.2); border: 1px solid var(--accent-color); border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem; color: white;">
+                        ⚠️ You have a pending payment.
+                    </div>
                     <button id="generateInvoiceBtn" class="btn btn-primary" style="width: 100%;">Deposit SATS</button>
                     <button id="manualCheckBtn" class="btn btn-outline" style="width: 100%; margin-top: 1rem; display: none;">I've paid - Try Again</button>
                 </div>
@@ -916,6 +919,13 @@
 
                 activeEngineInvoiceRef = data.engineInvoiceRef;
                 console.log('Stored engineInvoiceRef:', activeEngineInvoiceRef);
+                
+                // Persist invoice across refresh
+                localStorage.setItem('pendingInvoiceRef', activeEngineInvoiceRef);
+                localStorage.setItem('pendingInvoiceAmount', amountSats);
+                localStorage.setItem('pendingInvoiceUser', userId);
+                localStorage.setItem('pendingAgentId', agentId);
+
                 const invoiceString = data.paymentRequest;
                 lightningInvoice.value = invoiceString;
                 
@@ -939,18 +949,21 @@
 
                 invoiceContainer.style.display = 'block';
                 // Only add the manual check button once
-                if (!document.getElementById('retryPaymentBtn')) {
-                    const btn = document.createElement('button');
-                    btn.id = 'retryPaymentBtn';
-                    btn.className = 'btn btn-outline';
-                    btn.style.width = '100%';
-                    btn.style.marginTop = '1rem';
-                    btn.innerText = "I've paid - Try Again";
-                    btn.onclick = verifyPayment;
-                    invoiceContainer.appendChild(btn);
-                }
+                const existing = document.getElementById('retryPaymentBtn');
+                if (existing) existing.remove();
+                
+                const btn = document.createElement('button');
+                btn.id = 'retryPaymentBtn';
+                btn.className = 'btn btn-outline';
+                btn.style.width = '100%';
+                btn.style.marginTop = '1rem';
+                btn.innerText = "I've paid - Try Again";
+                btn.onclick = verifyPayment;
+                invoiceContainer.appendChild(btn);
+                
                 manualCheckBtn.style.display = 'none'; // Ensure manualCheckBtn is hidden if we use retryPaymentBtn
                 document.getElementById('depositIntro').style.display = 'none';
+                document.getElementById('pendingBanner').style.display = 'none';
                 generateInvoiceBtn.style.display = 'none';
             } catch (err) {
                 alert('Error: ' + err.message);
@@ -1055,6 +1068,19 @@
             checkPaymentBtn.innerText = 'Verifying...';
             manualCheckBtn.disabled = true;
             manualCheckBtn.innerText = 'Verifying...';
+            
+            const existingVerify = document.getElementById('verifyingText');
+            if (existingVerify) existingVerify.remove();
+            
+            const vText = document.createElement('div');
+            vText.id = 'verifyingText';
+            vText.style.textAlign = 'center';
+            vText.style.marginTop = '0.5rem';
+            vText.style.fontSize = '0.8rem';
+            vText.style.color = 'var(--accent-color)';
+            vText.innerText = 'Verifying payment...';
+            invoiceContainer.appendChild(vText);
+
             const retryPaymentBtn = document.getElementById('retryPaymentBtn');
             if (retryPaymentBtn) {
                 retryPaymentBtn.disabled = true;
@@ -1074,6 +1100,11 @@
                     console.log(`Balance check result:`, balanceData);
 
                     // Payment successful! Balance credited.
+                    localStorage.removeItem('pendingInvoiceRef');
+                    localStorage.removeItem('pendingInvoiceAmount');
+                    localStorage.removeItem('pendingInvoiceUser');
+                    localStorage.removeItem('pendingAgentId');
+                    
                     depositSection.style.display = 'none';
                     invoiceContainer.style.display = 'none';
                     manualCheckBtn.style.display = 'none';
@@ -1095,6 +1126,9 @@
                 console.error(`Error during payment verification for ${activeEngineInvoiceRef}:`, err);
                 alert('Error checking payment: ' + err.message);
             } finally {
+                const vText = document.getElementById('verifyingText');
+                if (vText) vText.remove();
+                
                 checkPaymentBtn.disabled = false;
                 checkPaymentBtn.innerText = "I've paid - Try Again";
                 manualCheckBtn.disabled = false;
@@ -1133,6 +1167,30 @@
         // Save User ID to sessionStorage when changed
         userIdInput.addEventListener('change', () => {
             sessionStorage.setItem('user_id', userIdInput.value.trim());
+        });
+
+        // Restore pending invoice on load
+        window.addEventListener('load', async () => {
+            const pendingRef = localStorage.getItem('pendingInvoiceRef');
+            const pendingAmount = localStorage.getItem('pendingInvoiceAmount');
+            const pendingUser = localStorage.getItem('pendingInvoiceUser');
+            const pendingAgent = localStorage.getItem('pendingAgentId');
+
+            if (pendingRef && pendingAmount && pendingUser && pendingAgent) {
+                activeEngineInvoiceRef = pendingRef;
+                selectedAgentPrice = parseInt(pendingAmount);
+                selectedAgentId = pendingAgent;
+                userIdInput.value = pendingUser;
+
+                // Show modal and deposit section
+                modal.style.display = 'flex';
+                depositSection.style.display = 'block';
+                document.getElementById('depositIntro').style.display = 'none';
+                document.getElementById('pendingBanner').style.display = 'block';
+                
+                // Regenerate invoice UI (calling generateInvoice again to get QR)
+                await generateInvoice(pendingAgent, pendingUser, selectedAgentPrice);
+            }
         });
     </script>
     <script src="agentzero-widget.js"></script>
