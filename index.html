@@ -1067,10 +1067,14 @@
                 return;
             }
 
-            checkPaymentBtn.disabled = true;
-            checkPaymentBtn.innerText = 'Verifying...';
-            manualCheckBtn.disabled = true;
-            manualCheckBtn.innerText = 'Verifying...';
+            if (checkPaymentBtn) {
+                checkPaymentBtn.disabled = true;
+                checkPaymentBtn.innerText = 'Verifying...';
+            }
+            if (manualCheckBtn) {
+                manualCheckBtn.disabled = true;
+                manualCheckBtn.innerText = 'Verifying...';
+            }
             
             const existingVerify = document.getElementById('verifyingText');
             if (existingVerify) existingVerify.remove();
@@ -1132,10 +1136,14 @@
                 const vText = document.getElementById('verifyingText');
                 if (vText) vText.remove();
                 
-                checkPaymentBtn.disabled = false;
-                checkPaymentBtn.innerText = "I've paid - Try Again";
-                manualCheckBtn.disabled = false;
-                manualCheckBtn.innerText = "I've paid - Try Again";
+                if (checkPaymentBtn) {
+                    checkPaymentBtn.disabled = false;
+                    checkPaymentBtn.innerText = "I've paid - Try Again";
+                }
+                if (manualCheckBtn) {
+                    manualCheckBtn.disabled = false;
+                    manualCheckBtn.innerText = "I've paid - Try Again";
+                }
                 const retryPaymentBtn = document.getElementById('retryPaymentBtn');
                 if (retryPaymentBtn) {
                     retryPaymentBtn.disabled = false;
