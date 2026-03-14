@@ -900,63 +900,7 @@
             }
         }
 
-        async function runAgent(agentId, userId) {
-            const taskInput = "run";
-
-            if (!userId) {
-                alert('Please enter a Wallet ID');
-                return;
-            }
-            if (!taskInput) {
-                alert('Please provide input for the task');
-                return;
-            }
-
-            runAgentBtn.disabled = true;
-            runAgentBtn.innerText = 'Running...';
-            agentOutputText.innerText = 'Processing payment and executing agent...';
-            outputContainer.style.display = 'block';
-
-            try {
-                const response = await fetch(`${API_BASE}/agents/${agentId}/run`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ input: taskInput, user_id: userId })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    agentOutputText.innerText = data.output;
-                    runAgentBtn.innerText = 'Run Again';
-                } else if (response.status === 402) {
-                    // Insufficient Balance
-                    agentOutputText.innerText = 'Error: ' + data.detail;
-                    depositSection.style.display = 'block';
-                    runAgentBtn.innerText = 'Insufficient Balance';
-                } else {
-                    throw new Error(data.detail || 'Failed to run agent');
-                }
-            } catch (err) {
-                agentOutputText.innerText = 'Error: ' + err.message;
-                runAgentBtn.innerText = 'Run Failed';
-            } finally {
-                runAgentBtn.disabled = false;
-            }
-        }
-
-        runAgentBtn.onclick = async () => {
-            const userId = userIdInput.value.trim();
-            await runAgent(selectedAgentId, userId);
-        };
-
-        generateInvoiceBtn.onclick = async () => {
-            const userId = userIdInput.value.trim();
-            if (!userId) {
-                alert('Please enter a User ID first');
-                return;
-            }
-
+        async function generateInvoice(agentId, userId, amountSats) {
             generateInvoiceBtn.disabled = true;
             generateInvoiceBtn.innerText = 'Generating...';
 
@@ -964,7 +908,7 @@
                 const response = await fetch(`${API_BASE}/payments/deposit`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, amount_sats: selectedAgentPrice + 10 })
+                    body: JSON.stringify({ user_id: userId, amount_sats: amountSats })
                 });
 
                 if (!response.ok) throw new Error('Failed to generate invoice');
@@ -1002,6 +946,66 @@
                 generateInvoiceBtn.disabled = false;
                 generateInvoiceBtn.innerText = 'Try Again';
             }
+        }
+
+        async function runAgent(agentId, userId) {
+            const taskInput = "run";
+
+            if (!userId) {
+                alert('Please enter a Wallet ID');
+                return;
+            }
+            if (!taskInput) {
+                alert('Please provide input for the task');
+                return;
+            }
+
+            runAgentBtn.disabled = true;
+            runAgentBtn.innerText = 'Running...';
+            agentOutputText.innerText = 'Processing payment and executing agent...';
+            outputContainer.style.display = 'block';
+
+            try {
+                const response = await fetch(`${API_BASE}/agents/${agentId}/run`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ task: taskInput, user_id: userId })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    agentOutputText.innerText = data.output || data.result;
+                    runAgentBtn.innerText = 'Run Again';
+                } else if (data.status === 'payment_required' || response.status === 402) {
+                    // Insufficient Balance
+                    agentOutputText.innerText = 'Insufficient Balance. Generating invoice...';
+                    depositSection.style.display = 'block';
+                    runAgentBtn.innerText = 'Insufficient Balance';
+                    await generateInvoice(agentId, userId, selectedAgentPrice);
+                } else {
+                    throw new Error(data.detail || data.result || 'Failed to run agent');
+                }
+            } catch (err) {
+                agentOutputText.innerText = 'Error: ' + err.message;
+                runAgentBtn.innerText = 'Run Failed';
+            } finally {
+                runAgentBtn.disabled = false;
+            }
+        }
+
+        runAgentBtn.onclick = async () => {
+            const userId = userIdInput.value.trim();
+            await runAgent(selectedAgentId, userId);
+        };
+
+        generateInvoiceBtn.onclick = async () => {
+            const userId = userIdInput.value.trim();
+            if (!userId) {
+                alert('Please enter a User ID first');
+                return;
+            }
+            await generateInvoice(selectedAgentId, userId, selectedAgentPrice);
         };
 
         async function verifyPayment() {

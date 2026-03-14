@@ -92,105 +92,44 @@ class Marketplace:
             results.append(listing)
         return results
 
-    async def run_agent(self, agent_id: str, input_str: str, user_id: str = "anonymous") -> ExecutionLog:
-        """Executes an agent securely with full payment flow."""
-        from agentstore_database import SessionLocal, Agent, LedgerTransaction
-        from agentstore_ledger import get_balance, deduct_balance, credit_agent
+    async def run_agent(self, agent_id, user_id, task):
+        # 1. Get agent
+        from agentstore_database import SessionLocal, Agent
+        from agentstore_ledger import get_balance, deduct_balance, credit_agent, credit_balance
         import httpx
-        
+
         db = SessionLocal()
         try:
             agent = db.query(Agent).filter(Agent.id == agent_id).first()
             if not agent:
-                raise ValueError(f"Agent '{agent_id}' not found in database.")
+                return {"status": "error", "result": "Agent not found"}
             
-            price_sats = agent.price_sats
-            required_balance = price_sats
+            # 2. Check balance — exactly price_sats, no buffer
+            balance = get_balance(user_id)
+            if balance < agent.price_sats:
+                return {"status": "payment_required", "result": f"Insufficient balance. Required {agent.price_sats} SATS"}
             
-            # 2. Check user balance
-            user_balance = get_balance(user_id)
-            import logging
-            logging.warning(f"Run agent balance check: user={user_id}, balance={user_balance}, required={required_balance} SATS")
-            if user_balance < required_balance:
-                raise ValueError(f"Insufficient balance. Required {required_balance} SATS")
+            # 3. Deduct from user balance
+            deduct_balance(user_id, agent.price_sats)
             
-            # 7. Execute agent (Attempt 1 - no payment yet)
-            agent_response = await call_agent_endpoint(agent.endpoint_url, input_str, user_id, user_balance)
+            # 4. Call agent endpoint — NO L402 handling for now, just direct call
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.post(
+                        agent.endpoint_url, 
+                        json={"task": task, "user_id": user_id}
+                    )
+                    result = response.json()
+            except Exception as e:
+                # Refund on failure
+                credit_balance(user_id, agent.price_sats)
+                return {"status": "error", "result": f"Agent error: {str(e)}"}
             
-            # Handle L402 automatically
-            if agent_response.get("status") == "l402_required":
-                from agentstore_payments import pay_lightning_invoice
-                lightning_invoice = agent_response.get("lightning_invoice")
-                macaroon = agent_response.get("macaroon")
-                
-                # Pay the L402 invoice from user balance (This IS the agent run payment)
-                payment_result = await pay_lightning_invoice(lightning_invoice, user_id, price_sats)
-                if payment_result["status"] != "success":
-                    output = "Insufficient balance for L402 payment"
-                else:
-                    # Credit builder 80%
-                    credit_agent(agent_id, price_sats * 0.8)
-                    
-                    # Credit platform 18%
-                    credit_agent("agentstore_platform", price_sats * 0.18)
-                    
-                    # Credit fee reserve 2%
-                    credit_agent("agentstore_fees", price_sats * 0.02)
-                    
-                    preimage = payment_result.get("preimage")
-                    # Retry the agent endpoint with the L402 Authorization header
-                    headers = {"Authorization": f"L402 {macaroon}:{preimage}"}
-                    retry_response = await call_agent_endpoint_with_auth(agent.endpoint_url, input_str, user_id, headers)
-                    
-                    if retry_response.get("status") == "success":
-                        agent_response = retry_response # Update agent_response for logging
-                        output = agent_response.get("result", "Agent finished without output.")
-                    else:
-                        output = retry_response.get("result", "Agent retry failed.")
+            # 5. Credit builder 80%
+            credit_agent(agent_id, int(agent.price_sats * 0.8))
             
-            elif agent_response.get("status") == "success":
-                # Deduct price from user (for direct success agents)
-                deduct_balance(user_id, price_sats, agent_id=agent_id)
-                
-                # Credit builder 80%
-                credit_agent(agent_id, price_sats * 0.8)
-                
-                # Credit platform 18%
-                credit_agent("agentstore_platform", price_sats * 0.18)
-                
-                # Credit fee reserve 2%
-                credit_agent("agentstore_fees", price_sats * 0.02)
-                
-                output = agent_response.get("result", "Agent finished without output.")
-            else:
-                output = agent_response.get("result", "Agent encountered an error.")
-
-            # 8. Log transaction to ledger_transactions table
-            # Only log if output was successfully obtained (either via L402 or direct success)
-            if agent_response.get("status") == "success":
-                new_tx = LedgerTransaction(
-                    from_account=user_id,
-                    to_account=agent_id,
-                    amount_sats=price_sats,
-                    transaction_type="agent_run",
-                    agent_id=agent_id
-                )
-                db.add(new_tx)
-                db.commit()
-
-            # Return execution log
-            from agentstore_trust import ExecutionLog
-            
-            # Ensure permissions_used is a list, not a dict (agent.permissions is JSON/dict)
-            perms = agent.permissions or {}
-            permissions_list = [k for k, v in perms.items() if v] if isinstance(perms, dict) else []
-            
-            return ExecutionLog(
-                agent_id=agent_id,
-                input_str=input_str,
-                output=output,
-                permissions_used=permissions_list
-            )
+            # 6. Return result
+            return {"status": "success", "result": result}
         finally:
             db.close()
 
