@@ -1144,19 +1144,25 @@
             }
         }
 
-        checkPaymentBtn.onclick = verifyPayment;
-        manualCheckBtn.onclick = verifyPayment;
+        const checkPaymentBtn = document.getElementById('checkPaymentBtn');
+        if (checkPaymentBtn) checkPaymentBtn.onclick = verifyPayment;
+        
+        const manualCheckBtn = document.getElementById('manualCheckBtn');
+        if (manualCheckBtn) manualCheckBtn.onclick = verifyPayment;
 
-        copyInvoiceBtn.onclick = () => {
-            const invoiceString = lightningInvoice.value;
-            navigator.clipboard.writeText(invoiceString).then(() => {
-                const originalText = copyInvoiceBtn.innerText;
-                copyInvoiceBtn.innerText = "✓ Copied!";
-                setTimeout(() => {
-                    copyInvoiceBtn.innerText = originalText;
-                }, 2000);
-            });
-        };
+        const copyInvoiceBtn = document.getElementById('copyInvoiceBtn');
+        if (copyInvoiceBtn) {
+            copyInvoiceBtn.onclick = () => {
+                const invoiceString = lightningInvoice.value;
+                navigator.clipboard.writeText(invoiceString).then(() => {
+                    const originalText = copyInvoiceBtn.innerText;
+                    copyInvoiceBtn.innerText = "✓ Copied!";
+                    setTimeout(() => {
+                        copyInvoiceBtn.innerText = originalText;
+                    }, 2000);
+                });
+            };
+        }
 
         // Initial fetch handled by DOMContentLoaded
         // fetchAgents();
