@@ -26,7 +26,11 @@ app.include_router(builder_router)
 # Add CORS middleware to allow the UI to fetch agents
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For local testing, allow all
+    allow_origins=[
+        "https://chooseyouragents.com",
+        "https://twilight-hill-0366.jannes-4a6.workers.dev",
+        "*"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,12 +44,15 @@ btc_price_cache = {"price": 0, "updated_at": 0}
 @app.get("/btc-price")
 async def get_btc_price():
     global btc_price_cache
-    if time.time() - btc_price_cache["updated_at"] > 60:
-        async with httpx.AsyncClient() as client:
-            r = await client.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd")
-            btc_price_cache["price"] = r.json()["bitcoin"]["usd"]
-            btc_price_cache["updated_at"] = time.time()
-    return {"usd": btc_price_cache["price"]}
+    try:
+        if time.time() - btc_price_cache["updated_at"] > 60:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                r = await client.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd")
+                btc_price_cache["price"] = r.json()["bitcoin"]["usd"]
+                btc_price_cache["updated_at"] = time.time()
+        return {"usd": btc_price_cache["price"]}
+    except Exception as e:
+        return {"usd": 85000}  # fallback price
 
 # Waitlist Request Model
 class WaitlistEntry(BaseModel):
