@@ -206,16 +206,26 @@ async def withdraw_earnings(builder_id: str, withdraw: WithdrawRequest):
             if response.status_code != 200:
                 raise HTTPException(status_code=400, detail="Payment failed — check your Lightning invoice")
         
-        # Deduct from all agent balances
-        for agent in agents:
+        # Deduct from agent balances proportionally
+        paid_amount = response.json().get("amountSats", total_sats)
+        remaining_to_deduct = paid_amount
+        
+        # Sort agents by balance desc to deduct from largest balances first
+        sorted_agents = sorted(agents, key=lambda a: get_agent_balance(a.id), reverse=True)
+        
+        for agent in sorted_agents:
+            if remaining_to_deduct <= 0:
+                break
             bal = get_agent_balance(agent.id)
             if bal > 0:
-                deduct_agent(agent.id, bal)
+                deduction = min(bal, remaining_to_deduct)
+                deduct_agent(agent.id, deduction)
+                remaining_to_deduct -= deduction
         
         return {
             "status": "success",
-            "amount_sats": total_sats,
-            "message": f"Withdrawal of {total_sats} sats sent successfully"
+            "amount_sats": paid_amount,
+            "message": f"Withdrawal of {paid_amount} sats sent successfully"
         }
     finally:
         db.close()

@@ -132,11 +132,11 @@
     <div id="withdrawModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center z-[100] p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-8 shadow-2xl">
             <h2 class="text-2xl font-bold mb-2">Withdraw Earnings</h2>
-            <p class="text-slate-400 mb-6 text-sm">Paste your Lightning invoice</p>
+            <p class="text-slate-400 mb-6 text-sm">Enter an invoice for up to <span id="modalMaxSats" class="text-white font-bold">0</span> SATS</p>
             
             <div class="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 mb-6">
                 <div class="flex justify-between items-center mb-1">
-                    <p class="text-xs text-orange-500 font-semibold uppercase tracking-wider">Available</p>
+                    <p class="text-xs text-orange-500 font-semibold uppercase tracking-wider">Available Balance</p>
                     <p class="text-xs text-slate-500 uppercase font-semibold">Min: 1,000 SATS</p>
                 </div>
                 <div class="flex items-baseline space-x-2">
@@ -149,7 +149,7 @@
             <label class="block text-xs font-medium text-slate-500 uppercase mb-2 tracking-wider">Lightning Invoice</label>
             <textarea id="lnInvoiceInput" rows="4" placeholder="lnbc1..." 
                 class="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white text-sm font-mono focus:outline-none focus:border-orange-500 mb-2 transition-all"></textarea>
-            <p class="text-[10px] text-slate-500 mb-6 italic">Generate a Lightning invoice in your wallet for the exact amount</p>
+            <p class="text-[10px] text-slate-500 mb-6 italic">Generate a Lightning invoice in your wallet for any amount up to your balance</p>
             
             <div class="flex space-x-3">
                 <button onclick="closeWithdrawModal()" class="flex-1 px-6 py-3 border border-slate-700 rounded-xl font-semibold hover:bg-slate-800 transition">Cancel</button>
@@ -180,6 +180,7 @@
         const withdrawModal = document.getElementById('withdrawModal');
         const modalTotalEarnings = document.getElementById('modalTotalEarnings');
         const modalTotalEarningsUSD = document.getElementById('modalTotalEarningsUSD');
+        const modalMaxSats = document.getElementById('modalMaxSats');
         const lnInvoiceInput = document.getElementById('lnInvoiceInput');
         const confirmWithdrawBtn = document.getElementById('confirmWithdrawBtn');
 
@@ -277,6 +278,7 @@
                     document.getElementById('totalEarningsUSD').textContent = totalUSDFormatted;
                     
                     if (modalTotalEarnings) modalTotalEarnings.textContent = totalSatsFormatted;
+                    if (modalMaxSats) modalMaxSats.textContent = totalSatsFormatted;
                     if (modalTotalEarningsUSD) modalTotalEarningsUSD.textContent = totalUSDFormatted;
                 }
 
