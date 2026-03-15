@@ -236,6 +236,7 @@ async def withdraw_earnings(builder_id: str, withdraw: WithdrawRequest):
             )
             db2.add(entry)
             db2.commit()
+            logging.warning(f"Withdrawal logged: {paid_amount} sats for {builder_id}")
         finally:
             db2.close()
         
@@ -249,27 +250,36 @@ async def withdraw_earnings(builder_id: str, withdraw: WithdrawRequest):
 
 @router.get("/builders/{builder_id}/transactions")
 async def get_builder_transactions(builder_id: str, db: Session = Depends(get_db)):
-    """Returns transaction history for all agents owned by the builder."""
+    """Returns transaction history for all agents and withdrawals for the builder."""
+    from agentstore_database import LedgerTransaction, Agent
     builder = get_builder_db(db, builder_id)
     if not builder:
         raise HTTPException(status_code=404, detail="Builder not found")
     
-    all_transactions = []
-    from agentstore_database import LedgerTransaction
-    for agent in builder.agents:
-        txs = db.query(LedgerTransaction).filter(LedgerTransaction.agent_id == agent.id).all()
-        for tx in txs:
-            all_transactions.append({
-                "id": tx.id,
-                "agent_id": tx.agent_id,
-                "agent_name": agent.name,
-                "amount_sats": tx.amount_sats,
-                "type": tx.transaction_type,
-                "created_at": tx.created_at
-            })
+    # Get all agents belonging to the builder to filter by agent_id
+    agents = db.query(Agent).filter(Agent.builder_id == builder_id).all()
+    agent_ids = [a.id for a in agents]
+    agent_names = {a.id: a.name for a in agents}
     
-    # Sort by date desc
-    all_transactions.sort(key=lambda x: x["created_at"], reverse=True)
+    # Get all transactions where from_account = builder_id OR agent belongs to builder
+    transactions = db.query(LedgerTransaction).filter(
+        (LedgerTransaction.from_account == builder_id) |
+        (LedgerTransaction.agent_id.in_(agent_ids))
+    ).order_by(LedgerTransaction.created_at.desc()).all()
+    
+    all_transactions = []
+    for tx in transactions:
+        all_transactions.append({
+            "id": tx.id,
+            "agent_id": tx.agent_id,
+            "agent_name": agent_names.get(tx.agent_id, "N/A"),
+            "amount_sats": tx.amount_sats,
+            "type": tx.transaction_type,
+            "created_at": tx.created_at,
+            "from_account": tx.from_account,
+            "to_account": tx.to_account
+        })
+    
     return all_transactions
 
 @router.patch("/agents/{agent_id}/price")
