@@ -168,9 +168,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // 4. Logic Functions
     async function fetchBTCPrice() {
         try {
-            const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+            const r = await fetch(`${API_BASE}/btc-price`);
             const d = await r.json();
-            usdPerSat = d.bitcoin.usd / 100000000;
+            usdPerSat = d.usd / 100000000;
         } catch(e) { /* keep fallback */ }
     }
 

@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 import uvicorn
 import os
+import time
+import httpx
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -32,6 +34,18 @@ app.add_middleware(
 
 # Global marketplace instance
 marketplace = Marketplace()
+
+btc_price_cache = {"price": 0, "updated_at": 0}
+
+@app.get("/btc-price")
+async def get_btc_price():
+    global btc_price_cache
+    if time.time() - btc_price_cache["updated_at"] > 60:
+        async with httpx.AsyncClient() as client:
+            r = await client.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd")
+            btc_price_cache["price"] = r.json()["bitcoin"]["usd"]
+            btc_price_cache["updated_at"] = time.time()
+    return {"usd": btc_price_cache["price"]}
 
 # Waitlist Request Model
 class WaitlistEntry(BaseModel):
@@ -205,7 +219,6 @@ async def join_waitlist(entry: WaitlistEntry, db: Session = Depends(get_db)):
 
 @app.post("/chat")
 async def chat(request: dict):
-    import httpx
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "https://api.anthropic.com/v1/messages",
