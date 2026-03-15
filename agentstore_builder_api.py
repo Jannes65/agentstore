@@ -114,6 +114,9 @@ async def submit_agent(submission: AgentSubmission, db: Session = Depends(get_db
 from agentstore_ledger import get_agent_balance, deduct_agent, get_transactions
 from agentstore_payments import create_invoice, check_payment
 
+class WithdrawRequest(BaseModel):
+    lightning_invoice: str
+
 class WithdrawalRequest(BaseModel):
     lightning_invoice: str
 
@@ -162,13 +165,12 @@ async def get_builder(builder_id: str, db: Session = Depends(get_db)):
     }
 
 @router.post("/builders/{builder_id}/withdraw")
-async def withdraw_earnings(builder_id: str, request: Request):
+async def withdraw_earnings(builder_id: str, withdraw: WithdrawRequest):
     import httpx, os
     from agentstore_ledger import get_agent_balance, deduct_agent
     from agentstore_database import SessionLocal, Agent
     
-    body = await request.json()
-    lightning_invoice = body.get("lightning_invoice", "").strip()
+    lightning_invoice = withdraw.lightning_invoice.strip()
     
     if not lightning_invoice:
         raise HTTPException(status_code=400, detail="Lightning invoice required")
