@@ -124,3 +124,19 @@ def reset_user_balance(user_id: str):
             db.commit()
     finally:
         db.close()
+
+def log_transaction(from_account: str, to_account: str, amount_sats: int, transaction_type: str, agent_id: str = None):
+    db = SessionLocal()
+    try:
+        entry = LedgerTransaction(
+            from_account=from_account,
+            to_account=to_account,
+            amount_sats=amount_sats,
+            transaction_type=transaction_type,
+            agent_id=agent_id,
+            created_at=datetime.utcnow()
+        )
+        db.add(entry)
+        db.commit()
+    finally:
+        db.close()

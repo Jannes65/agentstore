@@ -168,7 +168,7 @@ async def get_builder(builder_id: str, db: Session = Depends(get_db)):
 @router.post("/builders/{builder_id}/withdraw")
 async def withdraw_earnings(builder_id: str, withdraw: WithdrawRequest):
     import httpx, os
-    from agentstore_ledger import get_agent_balance, deduct_agent
+    from agentstore_ledger import get_agent_balance, deduct_agent, log_transaction
     from agentstore_database import SessionLocal, Agent
     
     lightning_invoice = withdraw.lightning_invoice.strip()
@@ -209,19 +209,25 @@ async def withdraw_earnings(builder_id: str, withdraw: WithdrawRequest):
         # Deduct from agent balances proportionally
         pay_data = response.json()
         paid_amount = pay_data.get("amountSats", 1000)
-        remaining_to_deduct = paid_amount
+        remaining = paid_amount
         
-        # Sort agents by balance desc to deduct from largest balances first
-        sorted_agents = sorted(agents, key=lambda a: get_agent_balance(a.id), reverse=True)
-        
-        for agent in sorted_agents:
-            if remaining_to_deduct <= 0:
-                break
+        for agent in agents:
             bal = get_agent_balance(agent.id)
-            if bal > 0:
-                deduction = min(bal, remaining_to_deduct)
-                deduct_agent(agent.id, deduction)
-                remaining_to_deduct -= deduction
+            if bal > 0 and remaining > 0:
+                deduct = min(bal, remaining)
+                deduct_agent(agent.id, deduct)
+                remaining -= deduct
+                if remaining <= 0:
+                    break
+        
+        # Log withdrawal to transaction history
+        log_transaction(
+            from_account=builder_id,
+            to_account="lightning_payout",
+            amount_sats=paid_amount,
+            transaction_type="withdrawal",
+            agent_id=None
+        )
         
         return {
             "status": "success",
