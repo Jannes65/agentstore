@@ -132,20 +132,28 @@
     <div id="withdrawModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center z-[100] p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-8 shadow-2xl">
             <h2 class="text-2xl font-bold mb-2">Withdraw Earnings</h2>
-            <p class="text-slate-400 mb-6 text-sm">Paste a Lightning invoice for <span id="withdrawAmount" class="font-bold text-white">0</span> SATS.</p>
+            <p class="text-slate-400 mb-6 text-sm">Paste your Lightning invoice</p>
             
-            <div class="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3 mb-6">
-                <p class="text-xs text-orange-500 font-semibold uppercase">Minimum Withdrawal</p>
-                <p class="text-sm text-slate-300">1,000 SATS</p>
+            <div class="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 mb-6">
+                <div class="flex justify-between items-center mb-1">
+                    <p class="text-xs text-orange-500 font-semibold uppercase tracking-wider">Available</p>
+                    <p class="text-xs text-slate-500 uppercase font-semibold">Min: 1,000 SATS</p>
+                </div>
+                <div class="flex items-baseline space-x-2">
+                    <span id="modalTotalEarnings" class="text-2xl font-bold text-white">0</span>
+                    <span class="text-slate-400 text-sm font-medium">SATS</span>
+                </div>
+                <p class="text-xs text-slate-400 mt-1">≈ $<span id="modalTotalEarningsUSD">0.00</span></p>
             </div>
 
-            <label class="block text-xs font-medium text-slate-500 uppercase mb-2">Lightning Invoice</label>
-            <textarea id="lnInvoiceInput" rows="4" placeholder="Paste your Lightning invoice here (lnbc1...)" 
-                class="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white text-sm font-mono focus:outline-none focus:border-orange-500 mb-6"></textarea>
+            <label class="block text-xs font-medium text-slate-500 uppercase mb-2 tracking-wider">Lightning Invoice</label>
+            <textarea id="lnInvoiceInput" rows="4" placeholder="lnbc1..." 
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white text-sm font-mono focus:outline-none focus:border-orange-500 mb-2 transition-all"></textarea>
+            <p class="text-[10px] text-slate-500 mb-6 italic">Generate a Lightning invoice in your wallet for the exact amount</p>
             
             <div class="flex space-x-3">
                 <button onclick="closeWithdrawModal()" class="flex-1 px-6 py-3 border border-slate-700 rounded-xl font-semibold hover:bg-slate-800 transition">Cancel</button>
-                <button id="confirmWithdrawBtn" class="flex-1 px-6 py-3 bg-btc-orange text-white rounded-xl font-bold shadow-lg shadow-orange-500/20 transition">Send Payout</button>
+                <button id="confirmWithdrawBtn" class="flex-1 px-6 py-3 bg-btc-orange text-white rounded-xl font-bold shadow-lg shadow-orange-500/20 transition hover:scale-[1.02] active:scale-[0.98]">Send Payout</button>
             </div>
         </div>
     </div>
@@ -170,7 +178,8 @@
         const loginBtn = document.getElementById('loginBtn');
 
         const withdrawModal = document.getElementById('withdrawModal');
-        const withdrawAmount = document.getElementById('withdrawAmount');
+        const modalTotalEarnings = document.getElementById('modalTotalEarnings');
+        const modalTotalEarningsUSD = document.getElementById('modalTotalEarningsUSD');
         const lnInvoiceInput = document.getElementById('lnInvoiceInput');
         const confirmWithdrawBtn = document.getElementById('confirmWithdrawBtn');
 
@@ -261,9 +270,14 @@
                     }).join('');
                     
                     const totalSats = earningsData.total_earnings_sats;
-                    document.getElementById('totalEarnings').textContent = totalSats.toLocaleString();
-                    document.getElementById('totalEarningsUSD').textContent = (totalSats * usdPerSat).toFixed(2);
-                    withdrawAmount.textContent = totalSats.toLocaleString();
+                    const totalSatsFormatted = totalSats.toLocaleString();
+                    const totalUSDFormatted = (totalSats * usdPerSat).toFixed(2);
+
+                    document.getElementById('totalEarnings').textContent = totalSatsFormatted;
+                    document.getElementById('totalEarningsUSD').textContent = totalUSDFormatted;
+                    
+                    if (modalTotalEarnings) modalTotalEarnings.textContent = totalSatsFormatted;
+                    if (modalTotalEarningsUSD) modalTotalEarningsUSD.textContent = totalUSDFormatted;
                 }
 
                 // Update Transactions
@@ -350,7 +364,8 @@
                 });
                 const result = await response.json();
                 if (response.ok) {
-                    alert(`✅ ${result.message}`);
+                    const amount = result.amount_sats || 'X';
+                    alert(`✅ ${amount} sats sent to your wallet!`);
                     closeWithdrawModal();
                     refreshData();
                 } else {

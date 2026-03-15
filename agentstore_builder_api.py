@@ -163,40 +163,54 @@ async def get_builder(builder_id: str, db: Session = Depends(get_db)):
 
 @router.post("/builders/{builder_id}/withdraw")
 async def withdraw_earnings(builder_id: str, request: Request):
+    import httpx, os
+    from agentstore_ledger import get_agent_balance, deduct_agent
+    from agentstore_database import SessionLocal, Agent
+    
     body = await request.json()
-    lightning_invoice = body.get("lightning_invoice")
+    lightning_invoice = body.get("lightning_invoice", "").strip()
     
     if not lightning_invoice:
         raise HTTPException(status_code=400, detail="Lightning invoice required")
     
-    # Get builder's total agent balances
-    from agentstore_ledger import get_agent_balance
-    from agentstore_database import SessionLocal, Agent
-    
+    # Get total earnings across all builder's agents
     db = SessionLocal()
     try:
         agents = db.query(Agent).filter(Agent.builder_id == builder_id).all()
         total_sats = sum(get_agent_balance(a.id) for a in agents)
         
         if total_sats < 1000:
-            raise HTTPException(status_code=400, detail="Minimum withdrawal is 1000 sats")
+            raise HTTPException(status_code=400, detail=f"Minimum withdrawal is 1000 sats. Current balance: {total_sats} sats")
         
-        # Pay via Chatabit bridge outbound
-        # For now deduct from agent balances and log — real Lightning payout pending Chatabit outbound support
-        from agentstore_ledger import deduct_agent
+        # Pay via Chatabit bridge
+        api_key = os.environ.get("CHATABIT_API_KEY")
+        import time
+        external_ref = f"payout_{builder_id}_{int(time.time())}"
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Create outbound payment
+            response = await client.post(
+                "https://chatabit.replit.app/subscriptionless-bridge/v1/pay",
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={
+                    "invoice": lightning_invoice,
+                    "externalRef": external_ref
+                }
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=400, detail="Payment failed — check your Lightning invoice")
+        
+        # Deduct from all agent balances
         for agent in agents:
             bal = get_agent_balance(agent.id)
             if bal > 0:
                 deduct_agent(agent.id, bal)
         
-        # Log the withdrawal
-        import logging
-        logging.warning(f"Withdrawal requested: {builder_id} → {total_sats} sats → {lightning_invoice[:30]}...")
-        
         return {
             "status": "success",
             "amount_sats": total_sats,
-            "message": f"Withdrawal of {total_sats} sats initiated. Payment will arrive shortly."
+            "message": f"Withdrawal of {total_sats} sats sent successfully"
         }
     finally:
         db.close()
