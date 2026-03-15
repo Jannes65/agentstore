@@ -78,8 +78,9 @@
                         <span id="totalEarnings" class="text-4xl font-bold btc-orange">0</span>
                         <span class="text-slate-400 font-medium">SATS</span>
                     </div>
-                    <p class="text-xs text-slate-500 mt-2">Available for withdrawal</p>
-                    <button id="withdrawBtn" class="w-full mt-6 bg-btc-orange text-white font-bold py-3 rounded-lg shadow-lg shadow-orange-500/20 transition">
+                    <p class="text-sm text-slate-400 mt-1">≈ $<span id="totalEarningsUSD">0.00</span></p>
+                    <p class="text-xs text-slate-500 mt-4">Available for withdrawal (Min 1,000 SATS)</p>
+                    <button id="withdrawBtn" class="w-full mt-4 bg-btc-orange text-white font-bold py-3 rounded-lg shadow-lg shadow-orange-500/20 transition">
                         Withdraw via Lightning
                     </button>
                 </div>
@@ -133,7 +134,13 @@
             <h2 class="text-2xl font-bold mb-2">Withdraw Earnings</h2>
             <p class="text-slate-400 mb-6 text-sm">Paste a Lightning invoice for <span id="withdrawAmount" class="font-bold text-white">0</span> SATS.</p>
             
-            <textarea id="lnInvoiceInput" rows="4" placeholder="lnbc1..." 
+            <div class="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3 mb-6">
+                <p class="text-xs text-orange-500 font-semibold uppercase">Minimum Withdrawal</p>
+                <p class="text-sm text-slate-300">1,000 SATS</p>
+            </div>
+
+            <label class="block text-xs font-medium text-slate-500 uppercase mb-2">Lightning Invoice</label>
+            <textarea id="lnInvoiceInput" rows="4" placeholder="Paste your Lightning invoice here (lnbc1...)" 
                 class="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white text-sm font-mono focus:outline-none focus:border-orange-500 mb-6"></textarea>
             
             <div class="flex space-x-3">
@@ -146,6 +153,15 @@
     <script>
         const API_BASE = 'https://agentstore-production.up.railway.app';
         let currentBuilderId = sessionStorage.getItem('builder_id') || localStorage.getItem('builderId');
+        let usdPerSat = 0.00075; // default fallback
+
+        async function fetchBTCPrice() {
+            try {
+                const r = await fetch(`${API_BASE}/btc-price`);
+                const d = await r.json();
+                usdPerSat = d.usd / 100000000;
+            } catch(e) { console.error("BTC price fetch failed", e); }
+        }
 
         const loginSection = document.getElementById('loginSection');
         const dashboardContent = document.getElementById('dashboardContent');
@@ -185,29 +201,34 @@
             dashboardContent.classList.remove('hidden');
             logoutBtn.classList.remove('hidden');
             
+            await fetchBTCPrice();
             await refreshData();
         }
 
         async function refreshData() {
             try {
-                const response = await fetch(`${API_BASE}/builders/${currentBuilderId}`);
-                if (!response.ok) throw new Error('Builder not found');
-                const data = await response.json();
+                // Fetch full profile and agents
+                const profileResponse = await fetch(`${API_BASE}/builders/${currentBuilderId}`);
+                if (!profileResponse.ok) throw new Error('Builder not found');
+                const profileData = await profileResponse.json();
+
+                // Fetch live earnings breakdown
+                const earningsResponse = await fetch(`${API_BASE}/builders/${currentBuilderId}/earnings`);
+                const earningsData = await earningsResponse.json();
 
                 // Update Profile
-                document.getElementById('builderName').textContent = data.profile.name;
-                document.getElementById('builderEmail').textContent = data.profile.email;
-                document.getElementById('builderIdDisplay').textContent = data.profile.builder_id;
+                document.getElementById('builderName').textContent = profileData.profile.name;
+                document.getElementById('builderEmail').textContent = profileData.profile.email;
+                document.getElementById('builderIdDisplay').textContent = profileData.profile.builder_id;
                 
                 // Update Submit button with builder_id
                 document.getElementById('submitNewAgentBtn').href = `submit.html?builder_id=${currentBuilderId}`;
 
                 // Update Agents
                 const agentsList = document.getElementById('agentsList');
-                if (data.agents.length > 0) {
-                    let totalSats = 0;
-                    agentsList.innerHTML = data.agents.map(agent => {
-                        totalSats += agent.balance_sats;
+                if (profileData.agents.length > 0) {
+                    agentsList.innerHTML = profileData.agents.map(agent => {
+                        const balance = earningsData.agent_breakdown[agent.id] || 0;
                         return `
                             <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div>
@@ -224,7 +245,7 @@
                                     </div>
                                     <div class="text-right">
                                         <p class="text-xs text-slate-500 uppercase">Earned</p>
-                                        <p class="font-bold btc-orange">${agent.balance_sats} SATS</p>
+                                        <p class="font-bold btc-orange">${balance} SATS</p>
                                     </div>
                                     <div class="flex space-x-2">
                                         <button onclick="editPrice('${agent.id}', ${agent.price_sats})" class="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition">
@@ -238,8 +259,11 @@
                             </div>
                         `;
                     }).join('');
-                    document.getElementById('totalEarnings').textContent = totalSats;
-                    withdrawAmount.textContent = totalSats;
+                    
+                    const totalSats = earningsData.total_earnings_sats;
+                    document.getElementById('totalEarnings').textContent = totalSats.toLocaleString();
+                    document.getElementById('totalEarningsUSD').textContent = (totalSats * usdPerSat).toFixed(2);
+                    withdrawAmount.textContent = totalSats.toLocaleString();
                 }
 
                 // Update Transactions
@@ -294,9 +318,10 @@
         }
 
         document.getElementById('withdrawBtn').onclick = () => {
-            const amount = document.getElementById('totalEarnings').textContent;
-            if (parseInt(amount) <= 0) {
-                alert('No earnings to withdraw.');
+            const amountText = document.getElementById('totalEarnings').textContent.replace(/,/g, '');
+            const amount = parseInt(amountText);
+            if (amount < 1000) {
+                alert('Minimum withdrawal is 1,000 SATS. Current balance: ' + amount.toLocaleString() + ' SATS');
                 return;
             }
             withdrawModal.classList.remove('hidden');
@@ -325,11 +350,11 @@
                 });
                 const result = await response.json();
                 if (response.ok) {
-                    alert(result.message);
+                    alert(`✅ ${result.message}`);
                     closeWithdrawModal();
                     refreshData();
                 } else {
-                    alert('Withdrawal failed: ' + (result.detail || 'Unknown error'));
+                    alert('Withdrawal failed: ' + (result.detail || result.message || 'Unknown error'));
                 }
             } catch (err) {
                 alert('Withdrawal error: ' + err.message);
