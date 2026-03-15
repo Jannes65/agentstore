@@ -201,14 +201,17 @@ async def withdraw_earnings(builder_id: str, withdraw: WithdrawRequest):
                 }
             )
             
-            logging.warning(f"Chatabit pay response: {response.status_code} {response.text}")
-            
             if response.status_code != 200:
                 raise HTTPException(status_code=400, detail="Payment failed — check your Lightning invoice")
+            
+            pay_data = response.json()
+            logging.warning(f"Chatabit pay response: {pay_data}")
+            paid_amount = pay_data.get("amountSats", 0)
+            
+            if paid_amount == 0:
+                raise HTTPException(status_code=400, detail="Could not determine payment amount")
         
         # Deduct from agent balances proportionally
-        pay_data = response.json()
-        paid_amount = pay_data.get("amountSats", 1000)
         remaining = paid_amount
         
         for agent in agents:
