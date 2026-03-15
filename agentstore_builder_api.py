@@ -220,14 +220,24 @@ async def withdraw_earnings(builder_id: str, withdraw: WithdrawRequest):
                 if remaining <= 0:
                     break
         
-        # Log withdrawal to transaction history
-        log_transaction(
-            from_account=builder_id,
-            to_account="lightning_payout",
-            amount_sats=paid_amount,
-            transaction_type="withdrawal",
-            agent_id=None
-        )
+        # Log withdrawal to transaction history — direct DB access
+        from agentstore_database import SessionLocal, LedgerTransaction
+        from datetime import datetime
+
+        db2 = SessionLocal()
+        try:
+            entry = LedgerTransaction(
+                from_account=builder_id,
+                to_account="lightning_payout",
+                amount_sats=paid_amount,
+                transaction_type="withdrawal",
+                agent_id=None,
+                created_at=datetime.utcnow()
+            )
+            db2.add(entry)
+            db2.commit()
+        finally:
+            db2.close()
         
         return {
             "status": "success",
