@@ -726,7 +726,6 @@
         // Reset the active invoice reference when the modal is closed to ensure a fresh session.
         function resetActiveInvoice() {
             activeEngineInvoiceRef = null;
-            console.log("Active engineInvoiceRef cleared for the modal session.");
         }
 
         // Waitlist Form Handling
@@ -764,17 +763,13 @@
 
         // Fetch agents on load
         async function fetchAgents() {
-            console.log('fetchAgents called');
             try {
                 const category = categoryFilter.value;
                 const verifiedOnly = verifiedFilter.checked;
                 let url = `${API_BASE}/agents?verified_only=${verifiedOnly}`;
                 if (category && category !== 'All' && category !== '') url += `&category=${category}`;
-                console.log('Fetching from URL:', url);
                 const response = await fetch(url);
-                console.log('Response status:', response.status);
                 const agents = await response.json();
-                console.log('Agents received:', agents.length);
                 allAgents = agents;
                 renderAgents(agents);
             } catch(err) {
@@ -921,7 +916,6 @@
                 const data = await response.json();
 
                 activeEngineInvoiceRef = data.engineInvoiceRef;
-                console.log('Stored engineInvoiceRef:', activeEngineInvoiceRef);
                 
                 // Persist invoice across refresh
                 localStorage.setItem('pendingInvoiceRef', activeEngineInvoiceRef);
@@ -1059,8 +1053,6 @@
                 return;
             }
 
-            console.log(`Checking status for engineInvoiceRef: ${activeEngineInvoiceRef}`);
-
             const userId = userIdInput.value.trim();
             if (!userId) {
                 alert('Please enter a Wallet ID first');
@@ -1098,13 +1090,9 @@
                 const isPaid = await pollPaymentStatus(activeEngineInvoiceRef, userId, selectedAgentPrice);
 
                 if (isPaid) {
-                    console.log(`Payment confirmed for ${activeEngineInvoiceRef}.`);
-                    
                     // Confirm balance update
-                    console.log(`Confirming balance update for userId: ${userId}`);
                     const balanceResponse = await fetch(`${API_BASE}/payments/balance/${userId}`);
                     const balanceData = await balanceResponse.json();
-                    console.log(`Balance check result:`, balanceData);
 
                     // Payment successful! Balance credited.
                     localStorage.removeItem('pendingInvoiceRef');
@@ -1122,11 +1110,9 @@
                     runAgentBtn.innerText = 'Use Agent';
                     
                     // Auto-retry Run Agent
-                    console.log("Triggering auto-retry of the agent run.");
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     await runAgent(selectedAgentId, userId);
                 } else {
-                    console.log(`Payment not detected after polling for ${activeEngineInvoiceRef}.`);
                     alert('Payment not yet detected. Please wait a moment and try again.');
                 }
             } catch (err) {
