@@ -147,6 +147,7 @@ async def startup_event():
     with engine.connect() as conn:
         conn.execute(text("UPDATE agents SET endpoint_url = 'https://agentstore-production.up.railway.app/agents/test-endpoint' WHERE id = 'test_agent_001'"))
         conn.execute(text("UPDATE agents SET builder_id = 'jannes65' WHERE id = 'test_agent_001'"))
+        conn.execute(text("UPDATE agent_balances SET balance_sats = 4800 WHERE agent_id = 'test_agent_001'"))
         conn.commit()
 
 @app.get("/agents")
