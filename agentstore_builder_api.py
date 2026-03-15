@@ -176,14 +176,34 @@ async def withdraw_earnings(builder_id: str, withdraw: WithdrawRequest):
     if not lightning_invoice:
         raise HTTPException(status_code=400, detail="Lightning invoice required")
     
+    # Decode invoice amount before paying
+    # BOLT11 invoices encode amount in the invoice string
+    # lnbc100n = 100 sats, lnbc1u = 100 sats etc.
+    import re
+    invoice_amount = 0
+    match = re.search(r'lnbc(\d+)([munp]?)', lightning_invoice.lower())
+    if match:
+        amount = int(match.group(1))
+        multiplier = match.group(2)
+        if multiplier == 'm': invoice_amount = amount * 100000
+        elif multiplier == 'u': invoice_amount = amount * 100
+        elif multiplier == 'n': invoice_amount = amount * 10  
+        elif multiplier == 'p': invoice_amount = max(1, amount // 10)
+        else: invoice_amount = amount * 100000000
+    
+    paid_amount = invoice_amount if invoice_amount > 0 else 1000  # fallback
+    
     # Get total earnings across all builder's agents
     db = SessionLocal()
     try:
         agents = db.query(Agent).filter(Agent.builder_id == builder_id).all()
         total_sats = sum(get_agent_balance(a.id) for a in agents)
         
-        if total_sats < 1000:
-            raise HTTPException(status_code=400, detail=f"Minimum withdrawal is 1000 sats. Current balance: {total_sats} sats")
+        if total_sats < paid_amount:
+            raise HTTPException(status_code=400, detail=f"Insufficient balance. Your total earnings: {total_sats} sats. Invoice amount: {paid_amount} sats.")
+        
+        if paid_amount < 1000:
+            raise HTTPException(status_code=400, detail=f"Minimum withdrawal is 1000 sats. Your invoice is for {paid_amount} sats.")
         
         # Pay via Chatabit bridge
         api_key = os.environ.get("CHATABIT_API_KEY")
@@ -201,15 +221,12 @@ async def withdraw_earnings(builder_id: str, withdraw: WithdrawRequest):
                 }
             )
             
-            if response.status_code != 200:
-                raise HTTPException(status_code=400, detail="Payment failed — check your Lightning invoice")
-            
             pay_data = response.json()
-            logging.warning(f"Chatabit pay response: {pay_data}")
-            paid_amount = pay_data.get("amountSats", 0)
+            logging.warning(f"Chatabit pay response: {response.status_code} {pay_data}")
             
-            if paid_amount == 0:
-                raise HTTPException(status_code=400, detail="Could not determine payment amount")
+            if response.status_code != 200:
+                error_msg = pay_data.get("detail", "Payment failed — check your Lightning invoice")
+                raise HTTPException(status_code=400, detail=error_msg)
         
         # Deduct from agent balances proportionally
         remaining = paid_amount
