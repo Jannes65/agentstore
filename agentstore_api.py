@@ -136,9 +136,10 @@ async def startup_event():
         }
         save_agent(db, agent4_data)
 
-    # Always ensure test_agent_001 has the correct endpoint URL
+    # Always ensure test_agent_001 has the correct endpoint URL and builder_id
     with engine.connect() as conn:
         conn.execute(text("UPDATE agents SET endpoint_url = 'https://agentstore-production.up.railway.app/agents/test-endpoint' WHERE id = 'test_agent_001'"))
+        conn.execute(text("UPDATE agents SET builder_id = 'jannes65' WHERE id = 'test_agent_001'"))
         conn.commit()
 
 @app.get("/agents")
