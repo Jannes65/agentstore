@@ -1,4 +1,5 @@
 import uuid
+import logging
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, Field
 from typing import Dict, List, Optional
@@ -199,6 +200,8 @@ async def withdraw_earnings(builder_id: str, withdraw: WithdrawRequest):
                     "externalRef": external_ref
                 }
             )
+            
+            logging.warning(f"Chatabit pay response: {response.status_code} {response.text}")
             
             if response.status_code != 200:
                 raise HTTPException(status_code=400, detail="Payment failed — check your Lightning invoice")
