@@ -1,3 +1,74 @@
+const API_BASE = "https://agentstore-production.up.railway.app";
+
+// Place these at the very top of agentzero-widget.js, outside DOMContentLoaded
+window.filterAgents = function() {
+    const search = document.getElementById('agentSearch').value.toLowerCase();
+    const agentList = document.getElementById('agentList');
+    if (!window.allBuilderAgents) return;
+    const filtered = window.allBuilderAgents.filter(a => a.name.toLowerCase().includes(search));
+    
+    let agentOptions = filtered.map(a => 
+        `<button onclick="window.selectAgentForReview('${a.id}', '${a.name}')" 
+         style="display:block;width:100%;margin:4px 0;padding:8px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer">
+         ${a.name}
+         </button>`
+    ).join('');
+    
+    agentList.innerHTML = `Select the agent to review:<br><br>${agentOptions}`;
+};
+
+window.selectAgentForReview = function(agentId, agentName) {
+    window.reviewAgentId = agentId;
+    // We need to find addMessage, but it's inside the closure. 
+    // For now, let's assume we'll move addMessage too or use a proxy.
+    // Actually, the instruction said "make sure ... are defined on window OUTSIDE any other function"
+    if (window.azAddMessage) {
+        window.azAddMessage('user', agentName);
+        window.azAddMessage('agent', `Selected: <b>${agentName}</b><br><br>Paste your GitHub repository URL:<br>
+            <input id="githubUrlInput" type="text" placeholder="https://github.com/username/repo" 
+            style="width:100%;padding:8px;margin-top:8px;border-radius:6px;border:1px solid #444;background:#2a2a2a;color:white">
+            <button onclick="window.startCodeReview()" 
+            style="width:100%;margin-top:8px;padding:8px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer">
+            ⚡ Pay 500 sats & Review
+            </button>`, true);
+    }
+}
+
+window.startCodeReview = async function() {
+    const githubUrl = document.getElementById('githubUrlInput').value;
+    const userId = sessionStorage.getItem('user_id') || 'jannes_001';
+    
+    if (!githubUrl) {
+        if (window.azAddMessage) window.azAddMessage('agent', 'Please enter a GitHub URL first.');
+        return;
+    }
+    
+    if (window.azAddMessage) {
+        window.azAddMessage('user', githubUrl);
+        window.azAddMessage('agent', '⏳ Processing payment and starting review...');
+    }
+    
+    const res = await fetch(`${API_BASE}/agents/review`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            github_url: githubUrl,
+            agent_id: window.reviewAgentId,
+            user_id: userId
+        })
+    });
+    const data = await res.json();
+    
+    if (window.azAddMessage) {
+        if (data.status === 'payment_required') {
+            window.azAddMessage('agent', `❌ Insufficient balance. You need 500 sats. Please deposit first.`);
+            return;
+        }
+        
+        window.azAddMessage('agent', `✅ <b>Review Complete!</b><br><br>${data.review_report}<br><br>${data.badge_awarded ? '🏆 Verified badge awarded!' : '🔍 Reviewed badge added.'}`, true);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
 (function() {
     // 1. CSS for the widget
@@ -235,6 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
         transcript.scrollTop = transcript.scrollHeight;
         return div;
     }
+    window.azAddMessage = addMessage;
 
     function showQuickReplies(replies) {
         const container = document.createElement('div');
@@ -297,65 +369,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
         `, true);
-    }
-
-    window.filterAgents = function() {
-        const search = document.getElementById('agentSearch').value.toLowerCase();
-        const agentList = document.getElementById('agentList');
-        const filtered = window.allBuilderAgents.filter(a => a.name.toLowerCase().includes(search));
-        
-        let agentOptions = filtered.map(a => 
-            `<button onclick="window.selectAgentForReview('${a.id}', '${a.name}')" 
-             style="display:block;width:100%;margin:4px 0;padding:8px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer">
-             ${a.name}
-             </button>`
-        ).join('');
-        
-        agentList.innerHTML = `Select the agent to review:<br><br>${agentOptions}`;
-    };
-
-    // Attach to window so onclick works
-    window.selectAgentForReview = function(agentId, agentName) {
-        window.reviewAgentId = agentId;
-        addMessage('user', agentName);
-        addMessage('agent', `Selected: <b>${agentName}</b><br><br>Paste your GitHub repository URL:<br>
-            <input id="githubUrlInput" type="text" placeholder="https://github.com/username/repo" 
-            style="width:100%;padding:8px;margin-top:8px;border-radius:6px;border:1px solid #444;background:#2a2a2a;color:white">
-            <button onclick="window.startCodeReview()" 
-            style="width:100%;margin-top:8px;padding:8px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer">
-            ⚡ Pay 500 sats & Review
-            </button>`, true);
-    }
-
-    window.startCodeReview = async function() {
-        const githubUrl = document.getElementById('githubUrlInput').value;
-        const userId = sessionStorage.getItem('user_id') || 'jannes_001';
-        
-        if (!githubUrl) {
-            addMessage('agent', 'Please enter a GitHub URL first.');
-            return;
-        }
-        
-        addMessage('user', githubUrl);
-        addMessage('agent', '⏳ Processing payment and starting review...');
-        
-        const res = await fetch(`${API_BASE}/agents/review`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                github_url: githubUrl,
-                agent_id: window.reviewAgentId,
-                user_id: userId
-            })
-        });
-        const data = await res.json();
-        
-        if (data.status === 'payment_required') {
-            addMessage('agent', `❌ Insufficient balance. You need 500 sats. Please deposit first.`);
-            return;
-        }
-        
-        addMessage('agent', `✅ <b>Review Complete!</b><br><br>${data.review_report}<br><br>${data.badge_awarded ? '🏆 Verified badge awarded!' : '🔍 Reviewed badge added.'}`, true);
     }
 
     async function handleSend() {
