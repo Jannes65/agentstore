@@ -1,71 +1,54 @@
 const API_BASE = "https://agentstore-production.up.railway.app";
 
 // Place these at the very top of agentzero-widget.js, outside DOMContentLoaded
-window.filterAgents = function() {
-    const searchInput = document.getElementById('agentSearch');
-    if (!searchInput) return;
-    const search = searchInput.value.toLowerCase();
-    const agentList = document.getElementById('agentList');
-    if (!window.allBuilderAgents) return;
-    const filtered = window.allBuilderAgents.filter(a => a.name.toLowerCase().includes(search));
-    
-    let agentOptions = filtered.map(a => 
-        `<button class="agent-select-btn" data-agent-id="${a.id}" data-agent-name="${a.name}"
-         style="display:block;width:100%;margin:4px 0;padding:8px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer">
-         ${a.name}
-         </button>`
-    ).join('');
-    
-    agentList.innerHTML = `Select the agent to review:<br><br>${agentOptions}`;
-};
+let reviewStep = 0;
+let reviewData = {};
 
-window.selectAgentForReview = function(agentId, agentName) {
-    window.reviewAgentId = agentId;
-    if (window.azAddMessage) {
-        window.azAddMessage('user', agentName);
-        window.azAddMessage('agent', `Selected: <b>${agentName}</b><br><br>Paste your GitHub repository URL:<br>
-            <input id="githubUrlInput" type="text" placeholder="https://github.com/username/repo" 
-            style="width:100%;padding:8px;margin-top:8px;border-radius:6px;border:1px solid #444;background:#2a2a2a;color:white">
-            <button id="startReviewBtn"
-            style="width:100%;margin-top:8px;padding:8px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer">
-            ⚡ Pay 500 sats & Review
-            </button>`, true);
+function handleCodeReview(userMessage) {
+    if (reviewStep === 0) {
+        // Get agent ID
+        fetch(`${API_BASE}/builders/${sessionStorage.getItem('builder_id')}`)
+            .then(r => r.json())
+            .then(data => {
+                const agents = data.agents || [];
+                const list = agents.map(a => `• ${a.name} (ID: ${a.id})`).join('\n');
+                addMessage('agent', `Your agents:\n${list}\n\nReply with the Agent ID you want reviewed.`);
+                reviewStep = 1;
+            });
+    } else if (reviewStep === 1) {
+        reviewData.agent_id = userMessage.trim();
+        addMessage('agent', 'Paste your GitHub URL (or type "paste" to paste code directly):');
+        reviewStep = 2;
+    } else if (reviewStep === 2) {
+        reviewData.github_url = userMessage.trim();
+        addMessage('agent', `Ready to review!\n\nAgent: ${reviewData.agent_id}\nGitHub: ${reviewData.github_url}\nCost: 500 sats\n\nType "confirm" to proceed.`);
+        reviewStep = 3;
+    } else if (reviewStep === 3 && userMessage.toLowerCase() === 'confirm') {
+        reviewStep = 0;
+        submitCodeReview();
     }
 }
 
-window.startCodeReview = async function() {
-    const githubUrl = document.getElementById('githubUrlInput').value;
+async function submitCodeReview() {
     const userId = sessionStorage.getItem('user_id') || 'jannes_001';
-    
-    if (!githubUrl) {
-        if (window.azAddMessage) window.azAddMessage('agent', 'Please enter a GitHub URL first.');
-        return;
-    }
-    
-    if (window.azAddMessage) {
-        window.azAddMessage('user', githubUrl);
-        window.azAddMessage('agent', '⏳ Processing payment and starting review...');
-    }
+    addMessage('agent', '⏳ Processing payment and reviewing code...');
     
     const res = await fetch(`${API_BASE}/agents/review`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-            github_url: githubUrl,
-            agent_id: window.reviewAgentId,
+            github_url: reviewData.github_url,
+            agent_id: reviewData.agent_id,
             user_id: userId
         })
     });
     const data = await res.json();
     
-    if (window.azAddMessage) {
-        if (data.status === 'payment_required') {
-            window.azAddMessage('agent', `❌ Insufficient balance. You need 500 sats. Please deposit first.`);
-            return;
-        }
-        
-        window.azAddMessage('agent', `✅ <b>Review Complete!</b><br><br>${data.review_report}<br><br>${data.badge_awarded ? '🏆 Verified badge awarded!' : '🔍 Reviewed badge added.'}`, true);
+    if (data.status === 'payment_required') {
+        addMessage('agent', '❌ Insufficient balance. Please deposit 500 sats first.');
+        return;
     }
+    addMessage('agent', `✅ Review Complete!\n\n${data.review_report}\n\n${data.badge_awarded ? '🏆 Verified badge awarded!' : '🔍 Review complete.'}`);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -329,55 +312,19 @@ document.addEventListener('DOMContentLoaded', function() {
         transcript.scrollTop = transcript.scrollHeight;
     }
 
-    async function showCodeReviewWizard() {
-        const builderId = sessionStorage.getItem('builder_id');
-        
-        if (!builderId) {
-            addMessage('agent', 'Please log into your Builder Dashboard first, then try again.');
-            return;
-        }
-        
-        // Fetch agents directly from API
-        const res = await fetch(`${API_BASE}/builders/${builderId}`);
-        const data = await res.json();
-        const agents = data.agents || [];
-        
-        if (agents.length === 0) {
-            addMessage('agent', 'No agents found. Please submit an agent first.');
-            return;
-        }
-
-        window.allBuilderAgents = agents; // Store for filtering
-        
-        let agentOptions = agents.map(a => 
-            `<button class="agent-select-btn" data-agent-id="${a.id}" data-agent-name="${a.name}"
-             style="display:block;width:100%;margin:4px 0;padding:8px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer">
-             ${a.name}
-             </button>`
-        ).join('');
-        
-        addMessage('agent', `
-            <div>
-                <b>🔒 Code Review — 500 sats</b><br><br>
-                <input type="text" id="agentSearch" placeholder="Search agents..." 
-                style="width:100%;padding:8px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:#2a2a2a;color:white">
-                <div id="agentList">
-                    Select the agent to review:<br><br>
-                    ${agentOptions}
-                </div>
-            </div>
-        `, true);
-    }
 
     async function handleSend() {
         const text = input.value.trim();
         if (!text) return;
 
-        if (text.toLowerCase().includes("code review") || text.toLowerCase().includes("review") || text.toLowerCase().includes("verified badge")) {
-             addMessage('user', text);
-             input.value = '';
-             showCodeReviewWizard();
-             return;
+        if (text.toLowerCase().includes('review') || 
+            text.toLowerCase().includes('verified') || 
+            text.toLowerCase().includes('badge') ||
+            reviewStep > 0) {
+            addMessage('user', text);
+            input.value = '';
+            handleCodeReview(text);
+            return;
         }
 
         addMessage('user', text);
@@ -460,23 +407,6 @@ Be concise, friendly, and Bitcoin-native in tone.`;
     }
 
     // 5. Event Listeners
-    transcript.addEventListener('click', function(e) {
-        if (e.target.classList.contains('agent-select-btn')) {
-            const agentId = e.target.dataset.agentId;
-            const agentName = e.target.dataset.agentName;
-            window.selectAgentForReview(agentId, agentName);
-        }
-        if (e.target.id === 'startReviewBtn') {
-            window.startCodeReview();
-        }
-    });
-
-    transcript.addEventListener('keyup', function(e) {
-        if (e.target.id === 'agentSearch') {
-            window.filterAgents();
-        }
-    });
-
     document.getElementById('az-bubble').addEventListener('click', function() {
         document.getElementById('az-window').style.display = 'flex';
         document.getElementById('az-bubble').style.display = 'none';
@@ -490,7 +420,7 @@ Be concise, friendly, and Bitcoin-native in tone.`;
                 addMessage('agent', greeting);
                 messages.push({ role: 'assistant', content: greeting });
                 showQuickReplies([
-                    { text: "🔒 Start Code Review", action: showCodeReviewWizard },
+                    { text: "🔒 Start Code Review", action: () => { handleCodeReview(''); } },
                     { text: "💡 Tips for my agents" },
                     { text: "💰 Withdrawal help" }
                 ]);
