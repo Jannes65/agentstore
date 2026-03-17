@@ -922,6 +922,7 @@
                 localStorage.setItem('pendingInvoiceAmount', amountSats);
                 localStorage.setItem('pendingInvoiceUser', userId);
                 localStorage.setItem('pendingAgentId', agentId);
+                localStorage.setItem('pendingInvoiceTime', Date.now().toString());
 
                 const invoiceString = data.paymentRequest;
                 lightningInvoice.value = invoiceString;
@@ -1099,6 +1100,7 @@
                     localStorage.removeItem('pendingInvoiceAmount');
                     localStorage.removeItem('pendingInvoiceUser');
                     localStorage.removeItem('pendingAgentId');
+                    localStorage.removeItem('pendingInvoiceTime');
                     
                     depositSection.style.display = 'none';
                     invoiceContainer.style.display = 'none';
@@ -1178,6 +1180,17 @@
             const pendingAmount = localStorage.getItem('pendingInvoiceAmount');
             const pendingUser = localStorage.getItem('pendingInvoiceUser');
             const pendingAgent = localStorage.getItem('pendingAgentId');
+            const pendingTime = localStorage.getItem('pendingInvoiceTime');
+
+            // Clear if older than 1 hour
+            if (pendingTime && (Date.now() - parseInt(pendingTime)) > 3600000) {
+                localStorage.removeItem('pendingInvoiceRef');
+                localStorage.removeItem('pendingInvoiceAmount');
+                localStorage.removeItem('pendingInvoiceUser');
+                localStorage.removeItem('pendingAgentId');
+                localStorage.removeItem('pendingInvoiceTime');
+                return; // Stop restoration
+            }
 
             if (pendingRef && pendingAmount && pendingUser && pendingAgent) {
                 // Restore session variables
