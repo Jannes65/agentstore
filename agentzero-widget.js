@@ -1,54 +1,3 @@
-// Place these at the very top of agentzero-widget.js, outside DOMContentLoaded
-let reviewStep = 0;
-let reviewData = {};
-
-function handleCodeReview(userMessage) {
-    if (reviewStep === 0) {
-        // Get agent ID
-        fetch(`${API_BASE}/builders/${sessionStorage.getItem('builder_id')}`)
-            .then(r => r.json())
-            .then(data => {
-                const agents = data.agents || [];
-                const list = agents.map(a => `• ${a.name} (ID: ${a.id})`).join('\n');
-                addMessage('agent', `Your agents:\n${list}\n\nReply with the Agent ID you want reviewed.`);
-                reviewStep = 1;
-            });
-    } else if (reviewStep === 1) {
-        reviewData.agent_id = userMessage.trim();
-        addMessage('agent', 'Paste your GitHub URL (or type "paste" to paste code directly):');
-        reviewStep = 2;
-    } else if (reviewStep === 2) {
-        reviewData.github_url = userMessage.trim();
-        addMessage('agent', `Ready to review!\n\nAgent: ${reviewData.agent_id}\nGitHub: ${reviewData.github_url}\nCost: 500 sats\n\nType "confirm" to proceed.`);
-        reviewStep = 3;
-    } else if (reviewStep === 3 && userMessage.toLowerCase() === 'confirm') {
-        reviewStep = 0;
-        submitCodeReview();
-    }
-}
-
-async function submitCodeReview() {
-    const userId = sessionStorage.getItem('user_id') || 'jannes_001';
-    addMessage('agent', '⏳ Processing payment and reviewing code...');
-    
-    const res = await fetch(`${API_BASE}/agents/review`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            github_url: reviewData.github_url,
-            agent_id: reviewData.agent_id,
-            user_id: userId
-        })
-    });
-    const data = await res.json();
-    
-    if (data.status === 'payment_required') {
-        addMessage('agent', '❌ Insufficient balance. Please deposit 500 sats first.');
-        return;
-    }
-    addMessage('agent', `✅ Review Complete!\n\n${data.review_report}\n\n${data.badge_awarded ? '🏆 Verified badge awarded!' : '🔍 Review complete.'}`);
-}
-
 document.addEventListener('DOMContentLoaded', function() {
 (function() {
     // 1. CSS for the widget
@@ -287,6 +236,56 @@ document.addEventListener('DOMContentLoaded', function() {
         return div;
     }
     window.azAddMessage = addMessage;
+
+    let reviewStep = 0;
+    let reviewData = {};
+
+    function handleCodeReview(userMessage) {
+        if (reviewStep === 0) {
+            // Get agent ID
+            fetch(`${API_BASE}/builders/${sessionStorage.getItem('builder_id')}`)
+                .then(r => r.json())
+                .then(data => {
+                    const agents = data.agents || [];
+                    const list = agents.map(a => `• ${a.name} (ID: ${a.id})`).join('\n');
+                    addMessage('agent', `Your agents:\n${list}\n\nReply with the Agent ID you want reviewed.`);
+                    reviewStep = 1;
+                });
+        } else if (reviewStep === 1) {
+            reviewData.agent_id = userMessage.trim();
+            addMessage('agent', 'Paste your GitHub URL (or type "paste" to paste code directly):');
+            reviewStep = 2;
+        } else if (reviewStep === 2) {
+            reviewData.github_url = userMessage.trim();
+            addMessage('agent', `Ready to review!\n\nAgent: ${reviewData.agent_id}\nGitHub: ${reviewData.github_url}\nCost: 500 sats\n\nType "confirm" to proceed.`);
+            reviewStep = 3;
+        } else if (reviewStep === 3 && userMessage.toLowerCase() === 'confirm') {
+            reviewStep = 0;
+            submitCodeReview();
+        }
+    }
+
+    async function submitCodeReview() {
+        const userId = sessionStorage.getItem('user_id') || 'jannes_001';
+        addMessage('agent', '⏳ Processing payment and reviewing code...');
+        
+        const res = await fetch(`${API_BASE}/agents/review`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                github_url: reviewData.github_url,
+                agent_id: reviewData.agent_id,
+                user_id: userId
+            })
+        });
+        const data = await res.json();
+        
+        if (data.status === 'payment_required') {
+            addMessage('agent', '❌ Insufficient balance. Please deposit 500 sats first.');
+            return;
+        }
+        addMessage('agent', `✅ Review Complete!\n\n${data.review_report}\n\n${data.badge_awarded ? '🏆 Verified badge awarded!' : '🔍 Review complete.'}`);
+    }
 
     function showQuickReplies(replies) {
         const container = document.createElement('div');
