@@ -49,11 +49,11 @@ async def review_agent_code(request: Request):
     agent_id = body.get("agent_id", "")
     user_id = body.get("user_id", "")
     
-    # Check user has paid (20000 sats)
+    # Check user has paid (500 sats)
     from agentstore_ledger import get_balance, deduct_balance
     balance = get_balance(user_id)
-    if balance < 20000:
-        return {"status": "payment_required", "amount_sats": 20000}
+    if balance < 500:
+        return {"status": "payment_required", "amount_sats": 500}
     
     # Fetch code from GitHub if URL provided
     review_content = code
@@ -72,8 +72,8 @@ async def review_agent_code(request: Request):
     if not review_content:
         return {"status": "error", "result": "No code provided"}
     
-    # Deduct 20000 sats
-    deduct_balance(user_id, 20000)
+    # Deduct 500 sats
+    deduct_balance(user_id, 500)
     
     # Call Claude API for security review
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
