@@ -1,4 +1,4 @@
-const API_BASE = "https://agentstore-production.up.railway.app";
+const API_BASE = window.API_BASE || "https://agentstore-production.up.railway.app";
 
 // Place these at the very top of agentzero-widget.js, outside DOMContentLoaded
 let reviewStep = 0;
