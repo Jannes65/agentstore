@@ -290,26 +290,33 @@
                 if (profileData.agents.length > 0) {
                     agentsList.innerHTML = profileData.agents.map(agent => {
                         const balance = earningsData.agent_breakdown[agent.id] || 0;
+                        const price = agent.price_sats || 0;
+                        const name = agent.name || 'Unnamed Agent';
+                        const descShort = agent.description_short || '';
+                        const descLong = agent.description_long || '';
+                        const category = agent.category || 'Other';
+                        const endpointUrl = agent.endpoint_url || '';
+                        
                         return `
                             <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div>
-                                    <h4 class="font-bold text-lg">${agent.name}</h4>
+                                    <h4 class="font-bold text-lg">${name}</h4>
                                     <div class="flex items-center space-x-3 mt-1">
-                                        <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">${agent.category}</span>
-                                        <span class="text-xs text-slate-500">${agent.run_count} runs</span>
+                                        <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">${category}</span>
+                                        <span class="text-xs text-slate-500">${agent.run_count || 0} runs</span>
                                     </div>
                                 </div>
                                 <div class="flex items-center space-x-8">
                                     <div class="text-right">
                                         <p class="text-xs text-slate-500 uppercase">Price</p>
-                                        <p class="font-bold">${agent.price_sats} SATS</p>
+                                        <p class="font-bold">${price} SATS</p>
                                     </div>
                                     <div class="text-right">
                                         <p class="text-xs text-slate-500 uppercase">Earned</p>
                                         <p class="font-bold btc-orange">${balance} SATS</p>
                                     </div>
                                     <div class="flex space-x-2">
-                                        <button onclick="openEditModal('${agent.id}', ${agent.price_sats}, '${agent.description_short.replace(/'/g, "\\'")}', '${agent.description_long.replace(/'/g, "\\'").replace(/\n/g, "\\n")}', '${agent.category}', '${agent.endpoint_url}')" class="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition">
+                                        <button onclick="openEditModal('${agent.id}', ${price}, '${descShort.replace(/'/g, "\\'")}', '${descLong.replace(/'/g, "\\'").replace(/\n/g, "\\n")}', '${category}', '${endpointUrl}')" class="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                         </button>
                                         <button onclick="delistAgent('${agent.id}')" class="p-2 hover:bg-red-900/30 rounded text-slate-400 hover:text-red-500 transition">
