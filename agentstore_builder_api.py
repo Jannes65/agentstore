@@ -332,25 +332,6 @@ async def delete_agent(agent_id: str, builder_id: str, db: Session = Depends(get
     delete_agent_db(db, agent_id)
     return {"message": "Agent delisted successfully"}
 
-@router.put("/agents/{agent_id}")
-async def update_agent(agent_id: str, request: Request):
-    logging.warning(f"PUT /agents/{agent_id} called")
-    body = await request.json()
-    from agentstore_database import SessionLocal, Agent
-    db = SessionLocal()
-    try:
-        agent = db.query(Agent).filter(Agent.id == agent_id).first()
-        if not agent:
-            raise HTTPException(status_code=404, detail="Agent not found")
-        if "price_sats" in body: agent.price_sats = body["price_sats"]
-        if "description_short" in body: agent.description_short = body["description_short"]
-        if "description_long" in body: agent.description_long = body["description_long"]
-        if "category" in body: agent.category = body["category"]
-        if "endpoint_url" in body: agent.endpoint_url = body["endpoint_url"]
-        db.commit()
-        return {"status": "updated", "agent_id": agent_id}
-    finally:
-        db.close()
 
 if __name__ == "__main__":
     import uvicorn

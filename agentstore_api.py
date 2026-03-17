@@ -263,6 +263,25 @@ async def startup_event():
         conn.execute(text("UPDATE agent_balances SET balance_sats = 4800 WHERE agent_id = 'test_agent_001'"))
         conn.commit()
 
+@app.put("/agents/{agent_id}")
+async def update_agent(agent_id: str, request: Request):
+    body = await request.json()
+    from agentstore_database import SessionLocal, Agent
+    db = SessionLocal()
+    try:
+        agent = db.query(Agent).filter(Agent.id == agent_id).first()
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        if "price_sats" in body: agent.price_sats = int(body["price_sats"])
+        if "description_short" in body: agent.description_short = body["description_short"]
+        if "description_long" in body: agent.description_long = body["description_long"]
+        if "category" in body: agent.category = body["category"]
+        if "endpoint_url" in body: agent.endpoint_url = body["endpoint_url"]
+        db.commit()
+        return {"status": "updated", "agent_id": agent_id}
+    finally:
+        db.close()
+
 @app.get("/agents")
 async def get_agents(
     category: Optional[Category] = None, 
