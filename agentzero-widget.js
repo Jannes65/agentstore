@@ -260,12 +260,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function showCodeReviewWizard() {
         const ctx = window.agentZeroContext;
-        if (!ctx || ctx.page !== 'dashboard') {
-            addMessage('agent', 'Please visit your Builder Dashboard to use the code review service.');
+        
+        // Try reading context — it may load after widget
+        if (!ctx || !ctx.agents || ctx.agents.length === 0) {
+            addMessage('agent', 'Loading your agents... please try again in a moment.');
             return;
         }
         
-        // Step 1: Show agent selector
+        // Show agent selector regardless of page
         let agentOptions = ctx.agents.map(a => 
             `<button onclick="selectAgentForReview('${a.id}', '${a.name}')" 
              style="display:block;width:100%;margin:4px 0;padding:8px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer">
@@ -273,13 +275,7 @@ document.addEventListener('DOMContentLoaded', function() {
              </button>`
         ).join('');
         
-        addMessage('agent', `
-            <div>
-            <b>🔒 Code Review — 500 sats</b><br><br>
-            Select the agent to review:<br><br>
-            ${agentOptions}
-            </div>
-        `, true); // true = render as HTML
+        addMessage('agent', `<div><b>🔒 Code Review — 500 sats</b><br><br>Select the agent to review:<br><br>${agentOptions}</div>`, true);
     }
 
     // Attach to window so onclick works
