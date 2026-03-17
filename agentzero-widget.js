@@ -275,27 +275,55 @@ document.addEventListener('DOMContentLoaded', function() {
             addMessage('agent', 'No agents found. Please submit an agent first.');
             return;
         }
+
+        window.allBuilderAgents = agents; // Store for filtering
         
         let agentOptions = agents.map(a => 
-            `<button onclick="selectAgentForReview('${a.id}', '${a.name}')" 
+            `<button onclick="window.selectAgentForReview('${a.id}', '${a.name}')" 
              style="display:block;width:100%;margin:4px 0;padding:8px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer">
              ${a.name}
              </button>`
         ).join('');
         
-        addMessage('agent', `<div><b>🔒 Code Review — 500 sats</b><br><br>Select the agent to review:<br><br>${agentOptions}</div>`, true);
+        addMessage('agent', `
+            <div>
+                <b>🔒 Code Review — 500 sats</b><br><br>
+                <input type="text" id="agentSearch" placeholder="Search agents..." 
+                onkeyup="window.filterAgents()" 
+                style="width:100%;padding:8px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:#2a2a2a;color:white">
+                <div id="agentList">
+                    Select the agent to review:<br><br>
+                    ${agentOptions}
+                </div>
+            </div>
+        `, true);
     }
+
+    window.filterAgents = function() {
+        const search = document.getElementById('agentSearch').value.toLowerCase();
+        const agentList = document.getElementById('agentList');
+        const filtered = window.allBuilderAgents.filter(a => a.name.toLowerCase().includes(search));
+        
+        let agentOptions = filtered.map(a => 
+            `<button onclick="window.selectAgentForReview('${a.id}', '${a.name}')" 
+             style="display:block;width:100%;margin:4px 0;padding:8px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer">
+             ${a.name}
+             </button>`
+        ).join('');
+        
+        agentList.innerHTML = `Select the agent to review:<br><br>${agentOptions}`;
+    };
 
     // Attach to window so onclick works
     window.selectAgentForReview = function(agentId, agentName) {
         window.reviewAgentId = agentId;
         addMessage('user', agentName);
-        addMessage('agent', `Great! Paste your GitHub repository URL for <b>${agentName}</b>:<br>
-            <input id="githubUrlInput" type="text" placeholder="https://github.com/..." 
-            style="width:100%;padding:8px;margin-top:8px;border-radius:6px;border:1px solid #ccc;background:#161b22;color:#c9d1d9;">
-            <button onclick="startCodeReview()" 
+        addMessage('agent', `Selected: <b>${agentName}</b><br><br>Paste your GitHub repository URL:<br>
+            <input id="githubUrlInput" type="text" placeholder="https://github.com/username/repo" 
+            style="width:100%;padding:8px;margin-top:8px;border-radius:6px;border:1px solid #444;background:#2a2a2a;color:white">
+            <button onclick="window.startCodeReview()" 
             style="width:100%;margin-top:8px;padding:8px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer">
-            Pay 500 sats & Review ⚡
+            ⚡ Pay 500 sats & Review
             </button>`, true);
     }
 
