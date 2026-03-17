@@ -129,6 +129,57 @@ document.addEventListener('DOMContentLoaded', function() {
             background-color: #30363d;
             cursor: not-allowed;
         }
+        .az-quick-replies {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .az-quick-reply {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 16px;
+            padding: 6px 12px;
+            font-size: 12px;
+            color: #8b949e;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .az-quick-reply:hover {
+            border-color: #f7931a;
+            color: #f7931a;
+        }
+        .az-wizard-card {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .az-wizard-card select, .az-wizard-card input {
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            padding: 8px;
+            color: #c9d1d9;
+            font-size: 14px;
+        }
+        .az-wizard-card button {
+            background-color: #f7931a;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .az-wizard-card button:disabled {
+            background-color: #30363d;
+            cursor: not-allowed;
+        }
     `;
     document.head.appendChild(style);
 
@@ -161,6 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let messages = [];
     let usdPerSat = 0.00075; // fallback
+    let wizardState = null; // { step: 1, data: {} }
     const API_BASE = "https://agentstore-production.up.railway.app";
     const path = (window.location && window.location.pathname) ? window.location.pathname : '';
     const currentPage = path.split('/').pop() || 'index.html';
@@ -174,17 +226,170 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch(e) { /* keep fallback */ }
     }
 
-    function appendMessage(role, content) {
+    function appendMessage(role, content, isHtml = false) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `az-msg az-msg-${role === 'user' ? 'user' : 'agent'}`;
-        msgDiv.textContent = content;
+        if (isHtml) {
+            msgDiv.innerHTML = content;
+        } else {
+            msgDiv.textContent = content;
+        }
         transcript.appendChild(msgDiv);
         transcript.scrollTop = transcript.scrollHeight;
+        return msgDiv;
+    }
+
+    function showQuickReplies(replies) {
+        const container = document.createElement('div');
+        container.className = 'az-quick-replies';
+        replies.forEach(reply => {
+            const btn = document.createElement('div');
+            btn.className = 'az-quick-reply';
+            btn.textContent = reply.text;
+            btn.onclick = () => {
+                container.remove();
+                if (reply.action) {
+                    reply.action();
+                } else {
+                    input.value = reply.text;
+                    handleSend();
+                }
+            };
+            container.appendChild(btn);
+        });
+        transcript.appendChild(container);
+        transcript.scrollTop = transcript.scrollHeight;
+    }
+
+    function startCodeReviewWizard() {
+        wizardState = { step: 1, data: {} };
+        const context = window.agentZeroContext || {};
+        const agents = context.agents || [];
+        
+        if (agents.length === 0) {
+            appendMessage('agent', "I don't see any agents in your account yet. You'll need to submit one first!");
+            return;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'az-wizard-card';
+        card.innerHTML = `
+            <p style="font-size: 12px; font-weight: bold; color: #f7931a; margin: 0;">Step 1: Select your agent</p>
+            <select id="az-wizard-agent-select">
+                <option value="">-- Choose Agent --</option>
+                ${agents.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}
+            </select>
+            <button id="az-wizard-next-1">Next</button>
+        `;
+        transcript.appendChild(card);
+        transcript.scrollTop = transcript.scrollHeight;
+
+        document.getElementById('az-wizard-next-1').onclick = () => {
+            const agentId = document.getElementById('az-wizard-agent-select').value;
+            if (!agentId) return;
+            wizardState.data.agent_id = agentId;
+            wizardState.step = 2;
+            card.remove();
+            appendMessage('user', `Selected: ${agents.find(a => a.id === agentId).name}`);
+            showStep2();
+        };
+    }
+
+    async function showStep2() {
+        const card = document.createElement('div');
+        card.className = 'az-wizard-card';
+        card.innerHTML = `
+            <p style="font-size: 12px; font-weight: bold; color: #f7931a; margin: 0;">Step 2: Paste GitHub URL</p>
+            <input type="text" id="az-wizard-github-url" placeholder="https://github.com/..." value="">
+            <button id="az-wizard-next-2">Next</button>
+        `;
+        transcript.appendChild(card);
+        transcript.scrollTop = transcript.scrollHeight;
+
+        document.getElementById('az-wizard-next-2').onclick = () => {
+            const url = document.getElementById('az-wizard-github-url').value.trim();
+            if (!url) return;
+            wizardState.data.github_url = url;
+            wizardState.step = 3;
+            card.remove();
+            appendMessage('user', `GitHub: ${url}`);
+            showStep3();
+        };
+    }
+
+    async function showStep3() {
+        const context = window.agentZeroContext || {};
+        const builderId = context.builder_id || 'anonymous';
+        
+        appendMessage('agent', "Checking your balance...");
+        
+        try {
+            const balRes = await fetch(`${API_BASE}/payments/balance/${builderId}`);
+            const bal = await balRes.json();
+            const balance = bal.balance_sats || 0;
+            
+            const card = document.createElement('div');
+            card.className = 'az-wizard-card';
+            card.innerHTML = `
+                <p style="font-size: 12px; font-weight: bold; color: #f7931a; margin: 0;">Step 3: Confirm Payment</p>
+                <div style="font-size: 13px; color: #8b949e;">
+                    Cost: <span style="color: white; font-weight: bold;">500 sats</span><br>
+                    Your Balance: <span style="color: ${balance >= 500 ? '#4ade80' : '#f87171'}; font-weight: bold;">${balance} sats</span>
+                </div>
+                ${balance >= 500 ? 
+                    `<button id="az-wizard-pay">Pay 500 sats & Start Review</button>` : 
+                    `<p style="font-size: 11px; color: #f87171;">Insufficient balance. Please top up your builder account.</p>`
+                }
+            `;
+            transcript.appendChild(card);
+            transcript.scrollTop = transcript.scrollHeight;
+
+            if (document.getElementById('az-wizard-pay')) {
+                document.getElementById('az-wizard-pay').onclick = async () => {
+                    document.getElementById('az-wizard-pay').disabled = true;
+                    document.getElementById('az-wizard-pay').textContent = "Processing...";
+                    
+                    const reviewData = {
+                        action: "code_review",
+                        agent_id: wizardState.data.agent_id,
+                        github_url: wizardState.data.github_url,
+                        user_id: builderId
+                    };
+                    
+                    card.remove();
+                    appendMessage('agent', "Initiating security review...");
+
+                    try {
+                        const reviewRes = await fetch(`${API_BASE}/agents/review`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(reviewData)
+                        });
+                        const review = await reviewRes.json();
+                        appendMessage('agent', `📋 **Security Review Complete**\n\n${review.review_report}\n\n${review.badge_awarded ? '✅ Verified badge awarded to your agent!' : '🔍 Reviewed badge awarded.'}`);
+                        wizardState = null;
+                    } catch (e) {
+                        appendMessage('agent', "Review failed. Please check your GitHub URL and try again.");
+                    }
+                };
+            }
+        } catch (e) {
+            appendMessage('agent', "Error checking balance. Please try again.");
+        }
     }
 
     async function handleSend() {
         const text = input.value.trim();
         if (!text) return;
+
+        if (text.toLowerCase().includes("code review") || text.toLowerCase().includes("verify")) {
+             if (window.agentZeroContext && window.agentZeroContext.page === 'dashboard') {
+                 appendMessage('user', text);
+                 input.value = '';
+                 startCodeReviewWizard();
+                 return;
+             }
+        }
 
         appendMessage('user', text);
         input.value = '';
@@ -274,8 +479,16 @@ Be concise, friendly, and Bitcoin-native in tone.`;
             let greeting = "👋 Hey! I'm AgentZero — your guide to the agent economy. Here's what I can do:\n\n🔍 Help you find the right agent for your needs\n📝 Help you write a perfect agent listing\n🔒 Review your agent's code for security issues (500 sats)\n💡 Suggest agent combinations for complex tasks\n💰 Help you price your agent competitively\n⚡ Explain how Lightning payments work on AgentStore\n\nWhat would you like help with today?";
             if (currentPage === 'builder.html' || currentPage === 'submit.html') {
                 greeting = "👋 Listing an agent? I can help you write a great description, set the right price, and get your agent **Verified** with a security review (500 sats). What would you like help with?";
-            } else if (currentPage === 'dashboard.html') {
-                greeting = "👋 Want to boost your agent's visibility? I can review your listing and offer tips.";
+            } else if (currentPage === 'dashboard.html' || (window.agentZeroContext && window.agentZeroContext.page === 'dashboard')) {
+                greeting = "👋 Welcome to your dashboard! I can help you manage your agents or start a **Security Review** (500 sats) to get the Verified badge.";
+                appendMessage('agent', greeting);
+                messages.push({ role: 'assistant', content: greeting });
+                showQuickReplies([
+                    { text: "🔒 Start Code Review", action: startCodeReviewWizard },
+                    { text: "💡 Tips for my agents" },
+                    { text: "💰 Withdrawal help" }
+                ]);
+                return;
             }
             appendMessage('agent', greeting);
             messages.push({ role: 'assistant', content: greeting });

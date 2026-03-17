@@ -285,6 +285,13 @@
                 // Update Submit button with builder_id
                 document.getElementById('submitNewAgentBtn').href = `submit.html?builder_id=${currentBuilderId}`;
 
+                // Set context for AgentZero widget
+                window.agentZeroContext = {
+                    builder_id: currentBuilderId,
+                    agents: profileData.agents.map(a => ({ id: a.id, name: a.name })),
+                    page: 'dashboard'
+                };
+
                 // Update Agents
                 const agentsList = document.getElementById('agentsList');
                 if (profileData.agents.length > 0) {
