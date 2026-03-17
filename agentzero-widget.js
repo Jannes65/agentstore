@@ -261,9 +261,17 @@ document.addEventListener('DOMContentLoaded', function() {
     function showCodeReviewWizard() {
         const ctx = window.agentZeroContext;
         
-        // Try reading context — it may load after widget
         if (!ctx || !ctx.agents || ctx.agents.length === 0) {
-            addMessage('agent', 'Loading your agents... please try again in a moment.');
+            // Retry after 1 second
+            addMessage('agent', 'Loading your agents...');
+            setTimeout(() => {
+                const retryCtx = window.agentZeroContext;
+                if (retryCtx && retryCtx.agents && retryCtx.agents.length > 0) {
+                    showCodeReviewWizard();
+                } else {
+                    addMessage('agent', 'Please go to your Builder Dashboard first.');
+                }
+            }, 1000);
             return;
         }
         
