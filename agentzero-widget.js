@@ -2,13 +2,15 @@ const API_BASE = "https://agentstore-production.up.railway.app";
 
 // Place these at the very top of agentzero-widget.js, outside DOMContentLoaded
 window.filterAgents = function() {
-    const search = document.getElementById('agentSearch').value.toLowerCase();
+    const searchInput = document.getElementById('agentSearch');
+    if (!searchInput) return;
+    const search = searchInput.value.toLowerCase();
     const agentList = document.getElementById('agentList');
     if (!window.allBuilderAgents) return;
     const filtered = window.allBuilderAgents.filter(a => a.name.toLowerCase().includes(search));
     
     let agentOptions = filtered.map(a => 
-        `<button onclick="window.selectAgentForReview('${a.id}', '${a.name}')" 
+        `<button class="agent-select-btn" data-agent-id="${a.id}" data-agent-name="${a.name}"
          style="display:block;width:100%;margin:4px 0;padding:8px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer">
          ${a.name}
          </button>`
@@ -19,15 +21,12 @@ window.filterAgents = function() {
 
 window.selectAgentForReview = function(agentId, agentName) {
     window.reviewAgentId = agentId;
-    // We need to find addMessage, but it's inside the closure. 
-    // For now, let's assume we'll move addMessage too or use a proxy.
-    // Actually, the instruction said "make sure ... are defined on window OUTSIDE any other function"
     if (window.azAddMessage) {
         window.azAddMessage('user', agentName);
         window.azAddMessage('agent', `Selected: <b>${agentName}</b><br><br>Paste your GitHub repository URL:<br>
             <input id="githubUrlInput" type="text" placeholder="https://github.com/username/repo" 
             style="width:100%;padding:8px;margin-top:8px;border-radius:6px;border:1px solid #444;background:#2a2a2a;color:white">
-            <button onclick="window.startCodeReview()" 
+            <button id="startReviewBtn"
             style="width:100%;margin-top:8px;padding:8px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer">
             ⚡ Pay 500 sats & Review
             </button>`, true);
@@ -351,7 +350,7 @@ document.addEventListener('DOMContentLoaded', function() {
         window.allBuilderAgents = agents; // Store for filtering
         
         let agentOptions = agents.map(a => 
-            `<button onclick="window.selectAgentForReview('${a.id}', '${a.name}')" 
+            `<button class="agent-select-btn" data-agent-id="${a.id}" data-agent-name="${a.name}"
              style="display:block;width:100%;margin:4px 0;padding:8px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer">
              ${a.name}
              </button>`
@@ -361,7 +360,6 @@ document.addEventListener('DOMContentLoaded', function() {
             <div>
                 <b>🔒 Code Review — 500 sats</b><br><br>
                 <input type="text" id="agentSearch" placeholder="Search agents..." 
-                onkeyup="window.filterAgents()" 
                 style="width:100%;padding:8px;margin-bottom:8px;border-radius:6px;border:1px solid #444;background:#2a2a2a;color:white">
                 <div id="agentList">
                     Select the agent to review:<br><br>
@@ -462,6 +460,23 @@ Be concise, friendly, and Bitcoin-native in tone.`;
     }
 
     // 5. Event Listeners
+    transcript.addEventListener('click', function(e) {
+        if (e.target.classList.contains('agent-select-btn')) {
+            const agentId = e.target.dataset.agentId;
+            const agentName = e.target.dataset.agentName;
+            window.selectAgentForReview(agentId, agentName);
+        }
+        if (e.target.id === 'startReviewBtn') {
+            window.startCodeReview();
+        }
+    });
+
+    transcript.addEventListener('keyup', function(e) {
+        if (e.target.id === 'agentSearch') {
+            window.filterAgents();
+        }
+    });
+
     document.getElementById('az-bubble').addEventListener('click', function() {
         document.getElementById('az-window').style.display = 'flex';
         document.getElementById('az-bubble').style.display = 'none';
