@@ -302,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div id="az-review-qr" style="margin-bottom:8px"></div>
                 <input readonly value="${paymentRequest}" 
                     style="width:100%;padding:6px;background:#0d1117;color:#8b949e;border:1px solid #30363d;border-radius:4px;font-size:10px">
-                <button onclick="navigator.clipboard.writeText('${paymentRequest}').then(()=>this.textContent='✓ Copied!')" 
+                <button class="az-copy-invoice-btn" data-invoice="${paymentRequest}"
                     style="width:100%;margin-top:8px;padding:8px;background:#f7931a;color:white;border:none;border-radius:4px;cursor:pointer">
                     📋 Copy Invoice
                 </button>
@@ -506,6 +506,16 @@ Be concise, friendly, and Bitcoin-native in tone.`;
     document.getElementById('az-close').addEventListener('click', function() {
         azWindow.style.display = 'none';
         document.getElementById('az-bubble').style.display = 'flex';
+    });
+
+    document.getElementById('az-transcript').addEventListener('click', function(e) {
+        if (e.target.classList.contains('az-copy-invoice-btn')) {
+            const invoice = e.target.dataset.invoice;
+            navigator.clipboard.writeText(invoice).then(() => {
+                e.target.textContent = '✓ Copied!';
+                setTimeout(() => e.target.textContent = '📋 Copy Invoice', 2000);
+            });
+        }
     });
 
     sendBtn.onclick = handleSend;
