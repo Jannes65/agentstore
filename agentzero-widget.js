@@ -257,7 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 3. Variables & State
     const bubble = document.getElementById('az-bubble');
-    const window = document.getElementById('az-window');
+    const azWindow = document.getElementById('az-window');
     const closeBtn = document.getElementById('az-close');
     const transcript = document.getElementById('az-transcript');
     const input = document.getElementById('az-input');
@@ -408,7 +408,7 @@ Be concise, friendly, and Bitcoin-native in tone.`;
 
     // 5. Event Listeners
     document.getElementById('az-bubble').addEventListener('click', function() {
-        document.getElementById('az-window').style.display = 'flex';
+        azWindow.style.display = 'flex';
         document.getElementById('az-bubble').style.display = 'none';
         
         if (messages.length === 0) {
@@ -432,7 +432,7 @@ Be concise, friendly, and Bitcoin-native in tone.`;
     });
 
     document.getElementById('az-close').addEventListener('click', function() {
-        document.getElementById('az-window').style.display = 'none';
+        azWindow.style.display = 'none';
         document.getElementById('az-bubble').style.display = 'flex';
     });
 
