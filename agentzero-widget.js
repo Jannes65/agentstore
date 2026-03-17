@@ -1,4 +1,4 @@
-const API_BASE = window.API_BASE || "https://agentstore-production.up.railway.app";
+const AZ_API_BASE = "https://agentstore-production.up.railway.app";
 
 // Place these at the very top of agentzero-widget.js, outside DOMContentLoaded
 let reviewStep = 0;
@@ -7,7 +7,7 @@ let reviewData = {};
 function handleCodeReview(userMessage) {
     if (reviewStep === 0) {
         // Get agent ID
-        fetch(`${API_BASE}/builders/${sessionStorage.getItem('builder_id')}`)
+        fetch(`${AZ_API_BASE}/builders/${sessionStorage.getItem('builder_id')}`)
             .then(r => r.json())
             .then(data => {
                 const agents = data.agents || [];
@@ -33,7 +33,7 @@ async function submitCodeReview() {
     const userId = sessionStorage.getItem('user_id') || 'jannes_001';
     addMessage('agent', '⏳ Processing payment and reviewing code...');
     
-    const res = await fetch(`${API_BASE}/agents/review`, {
+    const res = await fetch(`${AZ_API_BASE}/agents/review`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
@@ -266,14 +266,14 @@ document.addEventListener('DOMContentLoaded', function() {
     let messages = [];
     let usdPerSat = 0.00075; // fallback
     let wizardState = null; // { step: 1, data: {} }
-    const API_BASE = "https://agentstore-production.up.railway.app";
+    const AZ_API_BASE = "https://agentstore-production.up.railway.app";
     const path = (window.location && window.location.pathname) ? window.location.pathname : '';
     const currentPage = path.split('/').pop() || 'index.html';
 
     // 4. Logic Functions
     async function fetchBTCPrice() {
         try {
-            const r = await fetch(`${API_BASE}/btc-price`);
+            const r = await fetch(`${AZ_API_BASE}/btc-price`);
             const d = await r.json();
             usdPerSat = d.usd / 100000000;
         } catch(e) { /* keep fallback */ }
@@ -353,7 +353,7 @@ When helping builders, offer the AgentZero Verified Code Review for 500 sats (~$
 Be concise, friendly, and Bitcoin-native in tone.`;
 
         try {
-            const response = await fetch(`${API_BASE}/chat`, {
+            const response = await fetch(`${AZ_API_BASE}/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -374,7 +374,7 @@ Be concise, friendly, and Bitcoin-native in tone.`;
                     const userId = reviewData.user_id || 'anonymous';
                     
                     // Check balance first
-                    const balRes = await fetch(`${API_BASE}/payments/balance/${userId}`);
+                    const balRes = await fetch(`${AZ_API_BASE}/payments/balance/${userId}`);
                     const bal = await balRes.json();
                     if (bal.balance_sats < 500) {
                         addMessage('agent', `You need 500 sats for a code review. Your balance: ${bal.balance_sats} sats. Please top up first.`);
@@ -384,7 +384,7 @@ Be concise, friendly, and Bitcoin-native in tone.`;
                     addMessage('agent', "Initiating security review...");
 
                     // Call review endpoint
-                    const reviewRes = await fetch(`${API_BASE}/agents/review`, {
+                    const reviewRes = await fetch(`${AZ_API_BASE}/agents/review`, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify(reviewData)
