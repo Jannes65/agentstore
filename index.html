@@ -1171,46 +1171,16 @@
 
         // Restore pending invoice on load
         document.addEventListener('DOMContentLoaded', async () => {
+            // Clear all pending invoice data on fresh load
+            localStorage.removeItem('pendingInvoiceRef');
+            localStorage.removeItem('pendingInvoiceAmount');
+            localStorage.removeItem('pendingInvoiceUser');
+            localStorage.removeItem('pendingAgentId');
+            localStorage.removeItem('pendingInvoiceTime');
             // Priority 1: Fetch BTC price and Agents
             await fetchBTCPrice();
             await fetchAgents();
 
-            // Priority 2: Restore pending invoice
-            const pendingRef = localStorage.getItem('pendingInvoiceRef');
-            const pendingAmount = localStorage.getItem('pendingInvoiceAmount');
-            const pendingUser = localStorage.getItem('pendingInvoiceUser');
-            const pendingAgent = localStorage.getItem('pendingAgentId');
-            const pendingTime = localStorage.getItem('pendingInvoiceTime');
-
-            // Clear if older than 1 hour
-            if (pendingTime && (Date.now() - parseInt(pendingTime)) > 3600000) {
-                localStorage.removeItem('pendingInvoiceRef');
-                localStorage.removeItem('pendingInvoiceAmount');
-                localStorage.removeItem('pendingInvoiceUser');
-                localStorage.removeItem('pendingAgentId');
-                localStorage.removeItem('pendingInvoiceTime');
-                return; // Stop restoration
-            }
-
-            if (pendingRef && pendingAmount && pendingUser && pendingAgent) {
-                // Restore session variables
-                activeEngineInvoiceRef = pendingRef;
-                selectedAgentPrice = parseInt(pendingAmount);
-                selectedAgentId = pendingAgent;
-                userIdInput.value = pendingUser;
-
-                // Show modal and deposit section
-                modal.style.display = 'flex';
-                depositSection.style.display = 'block';
-                document.getElementById('depositIntro').style.display = 'none';
-                document.getElementById('pendingBanner').style.display = 'block';
-                
-                // Open the modal for the pending agent (ensure it's rendered)
-                openRunModal(pendingAgent);
-                
-                // Regenerate invoice UI (calling generateInvoice again to get QR)
-                await generateInvoice(pendingAgent, pendingUser, selectedAgentPrice);
-            }
         });
     </script>
     <script src="agentzero-widget.js"></script>
