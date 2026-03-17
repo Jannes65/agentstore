@@ -258,25 +258,25 @@ document.addEventListener('DOMContentLoaded', function() {
         transcript.scrollTop = transcript.scrollHeight;
     }
 
-    function showCodeReviewWizard() {
-        const ctx = window.agentZeroContext;
+    async function showCodeReviewWizard() {
+        const builderId = sessionStorage.getItem('builder_id');
         
-        if (!ctx || !ctx.agents || ctx.agents.length === 0) {
-            // Retry after 1 second
-            addMessage('agent', 'Loading your agents...');
-            setTimeout(() => {
-                const retryCtx = window.agentZeroContext;
-                if (retryCtx && retryCtx.agents && retryCtx.agents.length > 0) {
-                    showCodeReviewWizard();
-                } else {
-                    addMessage('agent', 'Please go to your Builder Dashboard first.');
-                }
-            }, 1000);
+        if (!builderId) {
+            addMessage('agent', 'Please log into your Builder Dashboard first, then try again.');
             return;
         }
         
-        // Show agent selector regardless of page
-        let agentOptions = ctx.agents.map(a => 
+        // Fetch agents directly from API
+        const res = await fetch(`${API_BASE}/builders/${builderId}`);
+        const data = await res.json();
+        const agents = data.agents || [];
+        
+        if (agents.length === 0) {
+            addMessage('agent', 'No agents found. Please submit an agent first.');
+            return;
+        }
+        
+        let agentOptions = agents.map(a => 
             `<button onclick="selectAgentForReview('${a.id}', '${a.name}')" 
              style="display:block;width:100%;margin:4px 0;padding:8px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer">
              ${a.name}
