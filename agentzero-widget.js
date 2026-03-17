@@ -200,6 +200,13 @@ You help two types of users:
 1. BUILDERS listing agents — help them write clear descriptions, define permissions, set fair prices in sats, and explain what makes a good agent listing. Offer a premium assisted listing service for 20,000 sats (~$${(20000 * usdPerSat).toFixed(2)}).
 2. BUYERS looking for agents — ask what they need, recommend agents from the marketplace, explain what each agent does, and suggest agent combinations for complex tasks.
 
+When a user asks about code review, security audit, or verified badge:
+1. Ask for their Agent ID and GitHub URL (or offer direct paste)
+2. Explain the cost: 20,000 sats (~$X USD)
+3. Tell them to deposit sats first if needed
+4. Once they provide the details, respond with exactly this JSON format:
+{"action": "code_review", "agent_id": "xxx", "github_url": "xxx", "user_id": "xxx"}
+
 Always mention sats prices with USD equivalent. 
 When helping builders, offer the AgentZero Verified Code Review for 20,000 sats (~$${(20000 * usdPerSat).toFixed(2)}) which earns their agent a security badge.
 Be concise, friendly, and Bitcoin-native in tone.`;
@@ -219,8 +226,37 @@ Be concise, friendly, and Bitcoin-native in tone.`;
             if (!response.ok) throw new Error('Failed to fetch');
             const data = await response.json();
             const message = data.content[0].text;
-            
-            appendMessage('agent', message);
+
+            if (message.includes('"action": "code_review"')) {
+                try {
+                    const reviewData = JSON.parse(message.substring(message.indexOf('{'), message.lastIndexOf('}') + 1));
+                    const userId = reviewData.user_id || 'anonymous';
+                    
+                    // Check balance first
+                    const balRes = await fetch(`${API_BASE}/payments/balance/${userId}`);
+                    const bal = await balRes.json();
+                    if (bal.balance_sats < 20000) {
+                        appendMessage('agent', `You need 20,000 sats for a code review. Your balance: ${bal.balance_sats} sats. Please top up first.`);
+                        return;
+                    }
+                    
+                    appendMessage('agent', "Initiating security review...");
+
+                    // Call review endpoint
+                    const reviewRes = await fetch(`${API_BASE}/agents/review`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(reviewData)
+                    });
+                    const review = await reviewRes.json();
+                    appendMessage('agent', `📋 **Security Review Complete**\n\n${review.review_report}\n\n${review.badge_awarded ? '✅ Verified badge awarded to your agent!' : '🔍 Reviewed badge awarded.'}`);
+                } catch (e) {
+                    console.error("Failed to parse code review JSON", e);
+                    appendMessage('agent', message);
+                }
+            } else {
+                appendMessage('agent', message);
+            }
             messages.push({ role: 'assistant', content: message });
         } catch (error) {
             appendMessage('agent', "Sorry, I'm having trouble connecting to my brain. Please try again later!");
@@ -237,7 +273,7 @@ Be concise, friendly, and Bitcoin-native in tone.`;
         if (messages.length === 0) {
             let greeting = "👋 Hey! I'm AgentZero — your guide to the agent economy. Here's what I can do:\n\n🔍 Help you find the right agent for your needs\n📝 Help you write a perfect agent listing\n🔒 Review your agent's code for security issues (20,000 sats)\n💡 Suggest agent combinations for complex tasks\n💰 Help you price your agent competitively\n⚡ Explain how Lightning payments work on AgentStore\n\nWhat would you like help with today?";
             if (currentPage === 'builder.html' || currentPage === 'submit.html') {
-                greeting = "👋 Listing an agent? I can help you write a great description and set the right price.";
+                greeting = "👋 Listing an agent? I can help you write a great description, set the right price, and get your agent **Verified** with a security review (20,000 sats). What would you like help with?";
             } else if (currentPage === 'dashboard.html') {
                 greeting = "👋 Want to boost your agent's visibility? I can review your listing and offer tips.";
             }

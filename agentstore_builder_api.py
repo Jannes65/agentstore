@@ -1,5 +1,7 @@
+import os
 import uuid
 import logging
+import httpx
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, Field
 from typing import Dict, List, Optional
@@ -207,13 +209,14 @@ async def withdraw_earnings(builder_id: str, withdraw: WithdrawRequest):
         
         # Pay via Chatabit bridge
         api_key = os.environ.get("CHATABIT_API_KEY")
+        chatabit_url = os.environ.get("CHATABIT_URL", "https://bit-engage.com")
         import time
         external_ref = f"payout_{builder_id}_{int(time.time())}"
         
         async with httpx.AsyncClient(timeout=30.0) as client:
             # Create outbound payment
             response = await client.post(
-                "https://chatabit.replit.app/subscriptionless-bridge/v1/pay",
+                f"{chatabit_url}/subscriptionless-bridge/v1/pay",
                 headers={"Authorization": f"Bearer {api_key}"},
                 json={
                     "invoice": lightning_invoice,

@@ -18,10 +18,123 @@ from sqlalchemy import text
 from agentstore_database import init_db, get_db, save_agent, get_agent as get_agent_db, get_all_agents, save_execution_log, add_to_waitlist, Builder, engine
 from agentstore_builder_api import router as builder_router
 from agentstore_payments import create_invoice, check_payment
-from agentstore_ledger import credit_balance, get_balance
+from agentstore_ledger import credit_balance, get_balance, deduct_balance
 
 app = FastAPI(title="AgentStore API")
 app.include_router(builder_router)
+
+@app.post("/agents/{agent_id}/verify")
+async def verify_agent(agent_id: str, request: Request):
+    body = await request.json()
+    review_report = body.get("review_report", "")
+    github_url = body.get("github_url", "")
+    
+    from agentstore_database import SessionLocal, Agent
+    db = SessionLocal()
+    try:
+        agent = db.query(Agent).filter(Agent.id == agent_id).first()
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+        agent.verified = True
+        db.commit()
+        return {"status": "verified", "agent_id": agent_id}
+    finally:
+        db.close()
+
+@app.post("/agents/review")
+async def review_agent_code(request: Request):
+    body = await request.json()
+    github_url = body.get("github_url", "")
+    code = body.get("code", "")
+    agent_id = body.get("agent_id", "")
+    user_id = body.get("user_id", "")
+    
+    # Check user has paid (20000 sats)
+    from agentstore_ledger import get_balance, deduct_balance
+    balance = get_balance(user_id)
+    if balance < 20000:
+        return {"status": "payment_required", "amount_sats": 20000}
+    
+    # Fetch code from GitHub if URL provided
+    review_content = code
+    source = "direct_paste"
+    if github_url:
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                # Convert GitHub URL to raw content
+                raw_url = github_url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+                r = await client.get(raw_url)
+                review_content = r.text
+                source = "github"
+        except:
+            review_content = code
+    
+    if not review_content:
+        return {"status": "error", "result": "No code provided"}
+    
+    # Deduct 20000 sats
+    deduct_balance(user_id, 20000)
+    
+    # Call Claude API for security review
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        response = await client.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": anthropic_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json"
+            },
+            json={
+                "model": "claude-sonnet-4-20250514",
+                "max_tokens": 1000,
+                "messages": [{
+                    "role": "user",
+                    "content": f"""You are a security auditor for AI agents listed on AgentStore marketplace.
+                    
+Review this agent code for:
+1. Security vulnerabilities
+2. Data privacy issues  
+3. Malicious patterns
+4. Permission overreach
+5. Overall safety rating (SAFE / CAUTION / UNSAFE)
+
+Code source: {source}
+{"GitHub URL: " + github_url if github_url else ""}
+
+Code:
+{review_content[:5000]}
+
+Provide a concise security report with overall rating."""
+                }]
+            }
+        )
+        
+        review_data = response.json()
+        review_report = review_data["content"][0]["text"]
+    
+    # Award verified badge if source is GitHub and no critical issues
+    badge_awarded = False
+    if source == "github" and "UNSAFE" not in review_report:
+        if agent_id:
+            from agentstore_database import SessionLocal, Agent
+            db = SessionLocal()
+            try:
+                agent = db.query(Agent).filter(Agent.id == agent_id).first()
+                if agent:
+                    agent.verified = True
+                    db.commit()
+                    badge_awarded = True
+            finally:
+                db.close()
+    
+    return {
+        "status": "success",
+        "review_report": review_report,
+        "source": source,
+        "badge_awarded": badge_awarded,
+        "badge_type": "Verified ✅" if (badge_awarded and source == "github") else "Reviewed 🔍"
+    }
 
 # Add CORS middleware to allow the UI to fetch agents
 app.add_middleware(

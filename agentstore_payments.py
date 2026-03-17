@@ -5,11 +5,12 @@ from typing import Optional
 from agentstore_ledger import get_balance, deduct_balance
 
 CHATABIT_API_KEY = os.environ.get("CHATABIT_API_KEY")
-BASE_URL = "https://chatabit.replit.app/subscriptionless-bridge/v1"
+CHATABIT_URL = os.environ.get("CHATABIT_URL", "https://bit-engage.com")
+BASE_URL = f"{CHATABIT_URL}/subscriptionless-bridge/v1"
 
 import time
 async def create_invoice(amount_sats: int, memo: str, user_id: str):
-    """Calls POST https://chatabit.replit.app/subscriptionless-bridge/v1/invoices"""
+    """Calls POST {CHATABIT_URL}/subscriptionless-bridge/v1/invoices"""
     try:
         external_ref = f"{user_id}_{int(time.time())}"
         api_key = CHATABIT_API_KEY
@@ -39,7 +40,7 @@ async def create_invoice(amount_sats: int, memo: str, user_id: str):
         raise
 
 async def check_payment(engine_invoice_ref: str):
-    """Calls GET https://chatabit.replit.app/subscriptionless-bridge/v1/invoices/:id"""
+    """Calls GET {CHATABIT_URL}/subscriptionless-bridge/v1/invoices/:id"""
     api_key = CHATABIT_API_KEY
     logging.warning(f"Auth header: Bearer {api_key[:15] if api_key else 'NONE'}...")
     async with httpx.AsyncClient(timeout=30.0) as client:
