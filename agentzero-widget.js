@@ -266,25 +266,100 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function submitCodeReview() {
-        const userId = sessionStorage.getItem('user_id') || 'jannes_001';
-        addMessage('agent', '⏳ Processing payment and reviewing code...');
+        addMessage('agent', '⚡ Generating Lightning invoice for 500 sats...');
         
-        const res = await fetch(`${API_BASE}/agents/review`, {
+        // Step 1: Create Lightning invoice
+        const timestamp = Date.now();
+        const depositRes = await fetch(`${API_BASE}/payments/deposit`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-                github_url: reviewData.github_url,
-                agent_id: reviewData.agent_id,
-                user_id: userId
+                user_id: `review_${reviewData.agent_id}`,
+                amount_sats: 500,
+                memo: `Code review for ${reviewData.agent_id}`,
+                external_ref: `review_${reviewData.agent_id}_${timestamp}`
             })
         });
-        const data = await res.json();
+        const depositData = await depositRes.json();
         
-        if (data.status === 'payment_required') {
-            addMessage('agent', '❌ Insufficient balance. Please deposit 500 sats first.');
+        if (!depositData.paymentRequest) {
+            addMessage('agent', '❌ Failed to generate invoice. Please try again.');
             return;
         }
-        addMessage('agent', `✅ Review Complete!\n\n${data.review_report}\n\n${data.badge_awarded ? '🏆 Verified badge awarded!' : '🔍 Review complete.'}`);
+        
+        const engineInvoiceRef = depositData.engineInvoiceRef;
+        const paymentRequest = depositData.paymentRequest;
+        
+        // Step 2: Show invoice to builder
+        const shortInvoice = paymentRequest.substring(0, 20) + '...' + paymentRequest.substring(paymentRequest.length - 10);
+        addMessage('agent', `💳 Pay this Lightning invoice to start your review:\n\n${shortInvoice}\n\n[Tap to copy full invoice]`, false);
+        
+        // Create copy button and QR
+        const invoiceDiv = document.createElement('div');
+        invoiceDiv.className = 'az-msg az-msg-agent';
+        invoiceDiv.innerHTML = `
+            <div style="background:#161b22;padding:12px;border-radius:8px;border:1px solid #f7931a">
+                <div id="az-review-qr" style="margin-bottom:8px"></div>
+                <input readonly value="${paymentRequest}" 
+                    style="width:100%;padding:6px;background:#0d1117;color:#8b949e;border:1px solid #30363d;border-radius:4px;font-size:10px">
+                <button onclick="navigator.clipboard.writeText('${paymentRequest}').then(()=>this.textContent='✓ Copied!')" 
+                    style="width:100%;margin-top:8px;padding:8px;background:#f7931a;color:white;border:none;border-radius:4px;cursor:pointer">
+                    📋 Copy Invoice
+                </button>
+                <div id="az-poll-status" style="margin-top:8px;color:#8b949e;font-size:12px">⏳ Waiting for payment...</div>
+            </div>
+        `;
+        document.getElementById('az-transcript').appendChild(invoiceDiv);
+        
+        // Generate QR code
+        if (typeof QRCode !== 'undefined') {
+            new QRCode(document.getElementById('az-review-qr'), {
+                text: 'lightning:' + paymentRequest,
+                width: 200,
+                height: 200,
+                correctLevel: QRCode.CorrectLevel.L
+            });
+        }
+        
+        // Step 3: Poll for payment
+        let attempts = 0;
+        const maxAttempts = 40; // 2 minutes
+        const pollInterval = setInterval(async () => {
+            attempts++;
+            if (attempts > maxAttempts) {
+                clearInterval(pollInterval);
+                document.getElementById('az-poll-status').textContent = '❌ Payment timeout. Please try again.';
+                return;
+            }
+            
+            const statusRes = await fetch(`${API_BASE}/payments/status/${engineInvoiceRef}?user_id=review_${reviewData.agent_id}&amount_sats=500`);
+            const statusData = await statusRes.json();
+            
+            if (statusData.status === 'paid') {
+                clearInterval(pollInterval);
+                document.getElementById('az-poll-status').textContent = '✅ Payment confirmed! Running security review...';
+                
+                // Step 4: Run review
+                const reviewRes = await fetch(`${API_BASE}/agents/review`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        github_url: reviewData.github_url,
+                        agent_id: reviewData.agent_id,
+                        engine_invoice_ref: engineInvoiceRef
+                    })
+                });
+                const review = await reviewRes.json();
+                
+                // Step 5: Show results
+                const ratingEmoji = review.rating === 'SAFE' ? '✅' : review.rating === 'CAUTION' ? '⚠️' : '❌';
+                addMessage('agent', `${ratingEmoji} Security Review Complete!\n\n${review.review_report}\n\n${review.badge_awarded ? '🏆 Verified badge has been awarded to your agent!' : review.rating === 'CAUTION' ? '🔍 Reviewed badge awarded. Fix issues and resubmit for full verification.' : '❌ Badge not awarded. Please fix critical issues and resubmit (250 sats re-review).'}`);
+                
+                // Reset review state
+                reviewStep = 0;
+                reviewData = {};
+            }
+        }, 3000);
     }
 
     function showQuickReplies(replies) {

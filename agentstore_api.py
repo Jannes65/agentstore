@@ -45,37 +45,43 @@ async def verify_agent(agent_id: str, request: Request):
 async def review_agent_code(request: Request):
     body = await request.json()
     github_url = body.get("github_url", "")
-    code = body.get("code", "")
     agent_id = body.get("agent_id", "")
-    user_id = body.get("user_id", "")
+    engine_invoice_ref = body.get("engine_invoice_ref", "")
     
-    # Check user has paid (500 sats)
-    from agentstore_ledger import get_balance, deduct_balance
-    balance = get_balance(user_id)
-    if balance < 500:
-        return {"status": "payment_required", "amount_sats": 500}
+    # Verify payment confirmed via Chatabit
+    if not engine_invoice_ref:
+        return {"status": "error", "result": "No payment reference provided"}
     
-    # Fetch code from GitHub if URL provided
-    review_content = code
-    source = "direct_paste"
+    chatabit_url = os.environ.get("CHATABIT_URL", "https://www.bit-engage.com")
+    api_key = os.environ.get("CHATABIT_API_KEY")
+    
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        r = await client.get(
+            f"{chatabit_url}/subscriptionless-bridge/v1/invoices/{engine_invoice_ref}",
+            headers={"Authorization": f"Bearer {api_key}"}
+        )
+        status_data = r.json()
+    
+    if status_data.get("status") != "paid":
+        return {"status": "payment_required", "result": "Payment not confirmed"}
+    
+    # Fetch code from GitHub
+    review_content = ""
+    source = "direct"
     if github_url:
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
-                # Convert GitHub URL to raw content
                 raw_url = github_url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
                 r = await client.get(raw_url)
-                review_content = r.text
+                review_content = r.text[:5000]
                 source = "github"
         except:
-            review_content = code
+            pass
     
     if not review_content:
-        return {"status": "error", "result": "No code provided"}
+        return {"status": "error", "result": "Could not fetch code"}
     
-    # Deduct 500 sats
-    deduct_balance(user_id, 500)
-    
-    # Call Claude API for security review
+    # Claude security review
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
     async with httpx.AsyncClient(timeout=60.0) as client:
         response = await client.post(
@@ -87,53 +93,60 @@ async def review_agent_code(request: Request):
             },
             json={
                 "model": "claude-sonnet-4-20250514",
-                "max_tokens": 1000,
+                "max_tokens": 1500,
                 "messages": [{
                     "role": "user",
-                    "content": f"""You are a security auditor for AI agents listed on AgentStore marketplace.
-                    
-Review this agent code for:
+                    "content": f"""You are a security auditor for AI agents on AgentStore marketplace.
+
+Review this code for:
 1. Security vulnerabilities
-2. Data privacy issues  
+2. Data privacy issues
 3. Malicious patterns
 4. Permission overreach
-5. Overall safety rating (SAFE / CAUTION / UNSAFE)
+5. Overall rating: SAFE / CAUTION / UNSAFE
 
-Code source: {source}
-{"GitHub URL: " + github_url if github_url else ""}
-
+GitHub: {github_url}
 Code:
-{review_content[:5000]}
+{review_content}
 
-Provide a concise security report with overall rating."""
+Format your response as:
+RATING: [SAFE/CAUTION/UNSAFE]
+SUMMARY: [2-3 sentences]
+FINDINGS:
+- [finding 1]
+- [finding 2]
+RECOMMENDATIONS:
+- [recommendation 1]"""
                 }]
             }
         )
-        
         review_data = response.json()
         review_report = review_data["content"][0]["text"]
     
-    # Award verified badge if source is GitHub and no critical issues
+    # Award badge based on rating
     badge_awarded = False
-    if source == "github" and "UNSAFE" not in review_report:
-        if agent_id:
-            from agentstore_database import SessionLocal, Agent
-            db = SessionLocal()
-            try:
-                agent = db.query(Agent).filter(Agent.id == agent_id).first()
-                if agent:
-                    agent.verified = True
-                    db.commit()
-                    badge_awarded = True
-            finally:
-                db.close()
+    badge_type = "none"
+    if "RATING: SAFE" in review_report:
+        from agentstore_database import SessionLocal, Agent
+        db = SessionLocal()
+        try:
+            agent = db.query(Agent).filter(Agent.id == agent_id).first()
+            if agent:
+                agent.verified = True
+                db.commit()
+                badge_awarded = True
+                badge_type = "verified"
+        finally:
+            db.close()
+    elif "RATING: CAUTION" in review_report:
+        badge_type = "reviewed"
     
     return {
         "status": "success",
         "review_report": review_report,
-        "source": source,
         "badge_awarded": badge_awarded,
-        "badge_type": "Verified ✅" if (badge_awarded and source == "github") else "Reviewed 🔍"
+        "badge_type": badge_type,
+        "rating": "SAFE" if "RATING: SAFE" in review_report else "CAUTION" if "RATING: CAUTION" in review_report else "UNSAFE"
     }
 
 # Add CORS middleware to allow the UI to fetch agents
