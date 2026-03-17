@@ -263,7 +263,15 @@
             logoutBtn.classList.remove('hidden');
             
             await fetchBTCPrice();
-            await refreshData();
+            const agentsData = await refreshData();
+            
+            // Set context for AgentZero widget
+            window.agentZeroContext = {
+                builder_id: currentBuilderId,
+                agents: agentsData.map(a => ({id: a.id, name: a.name})),
+                page: 'dashboard'
+            };
+            console.log('AgentZero context set:', window.agentZeroContext);
         }
 
         async function refreshData() {
@@ -284,13 +292,6 @@
                 
                 // Update Submit button with builder_id
                 document.getElementById('submitNewAgentBtn').href = `submit.html?builder_id=${currentBuilderId}`;
-
-                // Set context for AgentZero widget
-                window.agentZeroContext = {
-                    builder_id: currentBuilderId,
-                    agents: profileData.agents.map(a => ({id: a.id, name: a.name})),
-                    page: 'dashboard'
-                };
 
                 // Update Agents
                 const agentsList = document.getElementById('agentsList');
@@ -363,6 +364,8 @@
                         </tr>
                     `).join('');
                 }
+
+                return profileData.agents;
 
             } catch (err) {
                 alert('Error loading dashboard: ' + err.message);
