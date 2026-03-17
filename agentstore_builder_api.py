@@ -334,6 +334,7 @@ async def delete_agent(agent_id: str, builder_id: str, db: Session = Depends(get
 
 @router.put("/agents/{agent_id}")
 async def update_agent(agent_id: str, request: Request):
+    logging.warning(f"PUT /agents/{agent_id} called")
     body = await request.json()
     from agentstore_database import SessionLocal, Agent
     db = SessionLocal()
