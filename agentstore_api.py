@@ -68,15 +68,40 @@ async def review_agent_code(request: Request):
     # Fetch code from GitHub
     review_content = ""
     source = "direct"
-    if github_url:
+    if github_url and "github.com" in github_url:
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                raw_url = github_url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
-                r = await client.get(raw_url)
-                review_content = r.text[:5000]
-                source = "github"
-        except:
-            pass
+            # Convert repo URL to API URL
+            # https://github.com/user/repo -> https://api.github.com/repos/user/repo/contents
+            parts = github_url.replace("https://github.com/", "").split("/")
+            if len(parts) >= 2:
+                owner, repo = parts[0], parts[1]
+                # If it's a file URL, fetch directly
+                if "/blob/" in github_url:
+                    raw_url = github_url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        r = await client.get(raw_url)
+                        review_content = r.text[:5000]
+                        source = "github_file"
+                else:
+                    # Repo-level URL — fetch main Python/JS files via GitHub API
+                    api_url = f"https://api.github.com/repos/{owner}/{repo}/contents"
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        r = await client.get(api_url, headers={"Accept": "application/vnd.github.v3+json"})
+                        files = r.json()
+                        # Find key files to review
+                        key_files = [f for f in files if isinstance(f, dict) and 
+                                    f.get('name', '').endswith(('.py', '.js', '.ts')) and
+                                    f.get('type') == 'file'][:3]
+                        # Fetch content of key files
+                        combined = ""
+                        for f in key_files:
+                            fr = await client.get(f['download_url'])
+                            combined += f"\n\n# File: {f['name']}\n{fr.text[:2000]}"
+                        review_content = combined[:5000]
+                        source = "github_repo"
+        except Exception as e:
+            import logging
+            logging.error(f"GitHub fetch error: {e}")
     
     if not review_content:
         return {"status": "error", "result": "Could not fetch code"}

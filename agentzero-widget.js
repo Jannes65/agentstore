@@ -257,11 +257,31 @@ document.addEventListener('DOMContentLoaded', function() {
             reviewStep = 2;
         } else if (reviewStep === 2) {
             reviewData.github_url = userMessage.trim();
-            addMessage('agent', `Ready to review!\n\nAgent: ${reviewData.agent_id}\nGitHub: ${reviewData.github_url}\nCost: 500 sats\n\nType "confirm" to proceed.`);
             reviewStep = 3;
-        } else if (reviewStep === 3 && userMessage.toLowerCase() === 'confirm') {
-            reviewStep = 0;
-            submitCodeReview();
+            
+            const confirmDiv = document.createElement('div');
+            confirmDiv.className = 'az-msg az-msg-agent';
+            confirmDiv.innerHTML = `
+                <div>Ready to review!<br><br>
+                <b>Agent:</b> ${reviewData.agent_id}<br>
+                <b>GitHub:</b> ${reviewData.github_url}<br>
+                <b>Cost:</b> 500 sats<br><br>
+                <button id="az-confirm-review-btn" 
+                    style="width:100%;padding:10px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold">
+                    ⚡ Confirm & Pay 500 sats
+                </button>
+                </div>
+            `;
+            document.getElementById('az-transcript').appendChild(confirmDiv);
+            document.getElementById('az-transcript').scrollTop = 99999;
+            
+            document.getElementById('az-confirm-review-btn').addEventListener('click', function() {
+                this.disabled = true;
+                this.textContent = 'Processing...';
+                reviewStep = 0;
+                submitCodeReview();
+            });
+            return; // Don't proceed to Claude API
         }
     }
 
@@ -492,9 +512,10 @@ Be concise, friendly, and Bitcoin-native in tone.`;
                 addMessage('agent', greeting);
                 messages.push({ role: 'assistant', content: greeting });
                 showQuickReplies([
-                    { text: "🔒 Start Code Review", action: () => { handleCodeReview(''); } },
-                    { text: "💡 Tips for my agents" },
-                    { text: "💰 Withdrawal help" }
+                    { text: "🔒 Code Review (500 sats)", action: () => { handleCodeReview('start'); } },
+                    { text: "💰 Withdrawal help" },
+                    { text: "💡 Improve my listing" },
+                    { text: "📊 Pricing advice" }
                 ]);
                 return;
             }
