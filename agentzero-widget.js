@@ -239,21 +239,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let reviewStep = 0;
     let reviewData = {};
+    let cachedAgents = [];
 
     function handleCodeReview(userMessage) {
         if (reviewStep === 0) {
             // Get agent ID
-            fetch(`${API_BASE}/builders/${sessionStorage.getItem('builder_id')}`)
+            const builderId = sessionStorage.getItem('builder_id');
+            if (!builderId) {
+                addMessage('agent', 'Please log into your Builder Dashboard first.');
+                return;
+            }
+            fetch(`${API_BASE}/builders/${builderId}`)
                 .then(r => r.json())
                 .then(data => {
-                    const agents = data.agents || [];
-                    const list = agents.map(a => `• ${a.name} (ID: ${a.id})`).join('\n');
-                    addMessage('agent', `Your agents:\n${list}\n\nReply with the Agent ID you want reviewed.`);
+                    cachedAgents = data.agents || [];
+                    if (cachedAgents.length === 0) {
+                        addMessage('agent', 'No agents found. Please submit an agent first.');
+                        return;
+                    }
+                    const list = cachedAgents.map(a => `• ${a.name}`).join('\n');
+                    addMessage('agent', `Select an agent to review:\n\n${list}\n\nReply with the Agent Name.`);
                     reviewStep = 1;
+                })
+                .catch(err => {
+                    addMessage('agent', 'Error loading agents. Please try again.');
+                    console.error('Agent fetch error:', err);
                 });
         } else if (reviewStep === 1) {
-            reviewData.agent_id = userMessage.trim();
-            addMessage('agent', 'Paste your GitHub URL (or type "paste" to paste code directly):');
+            const validAgent = cachedAgents.find(a => 
+                a.name.toLowerCase() === userMessage.trim().toLowerCase()
+            );
+            if (!validAgent) {
+                const names = cachedAgents.map(a => `• ${a.name}`).join('\n');
+                addMessage('agent', `"${userMessage}" not found. Please choose from:\n\n${names}`);
+                return; // Stay on step 1
+            }
+            reviewData.agent_id = validAgent.id;
+            reviewData.agent_name = validAgent.name;
+            addMessage('agent', `Selected: ${validAgent.name}\n\nPaste your GitHub repository URL:`);
             reviewStep = 2;
         } else if (reviewStep === 2) {
             reviewData.github_url = userMessage.trim();
