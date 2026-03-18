@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
     container.innerHTML = `
         <div id="az-window">
             <div id="az-header">
-                <h3>AgentZero — Assistant</h3>
+                <h3>Satoshi — Your Bitcoin Agent</h3>
                 <span id="az-close">&times;</span>
             </div>
             <div id="az-transcript"></div>
@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <button id="az-send">Send</button>
             </div>
         </div>
-        <div id="az-bubble">🤖</div>
+        <div id="az-bubble">⚡</div>
     `;
     document.body.appendChild(container);
 
@@ -428,7 +428,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         messages.push({ role: 'user', content: text });
 
-        const systemPrompt = `You are AgentZero, the AI assistant for AgentStore — the Bitcoin Lightning-native AI agent marketplace at chooseyouragents.com. 
+        const systemPrompt = `You are Satoshi, the AI assistant for AgentStore — the Bitcoin Lightning-native AI agent marketplace at chooseyouragents.com. 
 
 Current BTC context: 1 sat is approximately $${usdPerSat.toFixed(8)}.
 
@@ -444,7 +444,7 @@ When a user asks about code review, security audit, or verified badge:
 {"action": "code_review", "agent_id": "xxx", "github_url": "xxx", "user_id": "xxx"}
 
 Always mention sats prices with USD equivalent. 
-When helping builders, offer the AgentZero Verified Code Review for 500 sats (~$${(500 * usdPerSat).toFixed(2)}) which earns their agent a security badge.
+When helping builders, offer the Satoshi Verified Code Review for 500 sats (~$${(500 * usdPerSat).toFixed(2)}) which earns their agent a security badge.
 Be concise, friendly, and Bitcoin-native in tone.`;
 
         try {
@@ -507,7 +507,7 @@ Be concise, friendly, and Bitcoin-native in tone.`;
         document.getElementById('az-bubble').style.display = 'none';
         
         if (messages.length === 0) {
-            let greeting = "👋 Hey! I'm AgentZero — your guide to the agent economy. Here's what I can do:\n\n🔍 Help you find the right agent for your needs\n📝 Help you write a perfect agent listing\n🔒 Review your agent's code for security issues (500 sats)\n💡 Suggest agent combinations for complex tasks\n💰 Help you price your agent competitively\n⚡ Explain how Lightning payments work on AgentStore\n\nWhat would you like help with today?";
+            let greeting = "👋 Hey! I'm Satoshi — your guide to the agent economy. Here's what I can do:\n\n🔍 Help you find the right agent for your needs\n📝 Help you write a perfect agent listing\n🔒 Review your agent's code for security issues (500 sats)\n💡 Suggest agent combinations for complex tasks\n💰 Help you price your agent competitively\n⚡ Explain how Lightning payments work on AgentStore\n\nWhat would you like help with today?";
             if (currentPage === 'builder.html' || currentPage === 'submit.html') {
                 greeting = "👋 Listing an agent? I can help you write a great description, set the right price, and get your agent **Verified** with a security review (500 sats). What would you like help with?";
             } else if (currentPage === 'dashboard.html' || (window.agentZeroContext && window.agentZeroContext.page === 'dashboard')) {
