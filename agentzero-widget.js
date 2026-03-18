@@ -213,120 +213,60 @@ document.addEventListener('DOMContentLoaded', function() {
     let messages = [];
     let usdPerSat = 0.00075; // fallback
     let wizardState = null; // { step: 1, data: {} }
-    let reviewStep = 0;
-    let reviewData = {};
-    let cachedAgents = [];
     const API_BASE = "https://agentstore-production.up.railway.app";
-    const path = window.location.pathname || '';
+    const path = (window.location && window.location.pathname) ? window.location.pathname : '';
     const currentPage = path.split('/').pop() || 'index.html';
 
+    // 4. Logic Functions
     async function fetchBTCPrice() {
         try {
             const r = await fetch(`${API_BASE}/btc-price`);
             const d = await r.json();
             usdPerSat = d.usd / 100000000;
-        } catch(e) {}
+        } catch(e) { /* keep fallback */ }
     }
 
-    function handleCodeReview(userMessage) {
-        if (userMessage.toLowerCase() === 'cancel') {
-            reviewStep = 0;
-            reviewData = {};
-            cachedAgents = [];
-            addMessage('agent', 'Code review cancelled. How else can I help?');
-            return;
-        }
+    function addMessage(role, content, isHtml = false) {
+        const div = document.createElement('div');
+        div.className = `az-msg az-msg-${role === 'user' ? 'user' : 'agent'}`;
+        if (isHtml) div.innerHTML = content;
+        else div.textContent = content;
+        transcript.appendChild(div);
+        transcript.scrollTop = transcript.scrollHeight;
+        return div;
+    }
+    window.azAddMessage = addMessage;
 
+    let reviewStep = 0;
+    let reviewData = {};
+
+    function handleCodeReview(userMessage) {
         if (reviewStep === 0) {
-            const builderId = sessionStorage.getItem('builder_id');
-            if (!builderId) {
-                // Non-builder review — 50,000 sats, no badge
-                addMessage('agent', `🔒 **Generic Security Review — 50,000 sats (~$${(50000 * usdPerSat).toFixed(2)})**\n\nNo AgentStore account needed. Paste any GitHub URL for a full security audit.\n\nNote: No Verified badge is awarded for generic reviews — badges are exclusive to listed AgentStore agents.\n\nPaste your GitHub URL to continue:`);
-                reviewStep = 2;
-                reviewData.agent_id = 'generic_review';
-                reviewData.review_price = 50000;
-                return;
-            }
-            // Builder flow — fetch agents
-            fetch(`${API_BASE}/builders/${builderId}`)
+            // Get agent ID
+            fetch(`${API_BASE}/builders/${sessionStorage.getItem('builder_id')}`)
                 .then(r => r.json())
                 .then(data => {
-                    cachedAgents = data.agents || [];
-                    if (cachedAgents.length === 0) {
-                        addMessage('agent', 'No agents found. Please submit an agent first at /submit.html');
-                        return;
-                    }
-                    const list = cachedAgents.map(a => `• ${a.name}`).join('\n');
-                    addMessage('agent', `Which agent would you like reviewed?\n\n${list}\n\nReply with the agent name. (Type "cancel" to stop)`);
+                    const agents = data.agents || [];
+                    const list = agents.map(a => `• ${a.name} (ID: ${a.id})`).join('\n');
+                    addMessage('agent', `Your agents:\n${list}\n\nReply with the Agent ID you want reviewed.`);
                     reviewStep = 1;
-                    reviewData.review_price = 500;
-                })
-                .catch(err => {
-                    addMessage('agent', 'Error loading agents. Please try again.');
-                    console.error('Agent fetch error:', err);
                 });
         } else if (reviewStep === 1) {
-            // Validate agent ID or name exists in the list
-            const validAgent = cachedAgents.find(a => 
-                a.id === userMessage.trim() || 
-                a.name.toLowerCase() === userMessage.trim().toLowerCase()
-            );
-            if (!validAgent) {
-                addMessage('agent', `Agent not found. Please reply with one of the IDs or names from the list above.`);
-                return;
-            }
-            reviewData.agent_id = validAgent.id;
-            addMessage('agent', `Selected: ${validAgent.name}\n\nPaste your GitHub repository URL:`);
+            reviewData.agent_id = userMessage.trim();
+            addMessage('agent', 'Paste your GitHub URL (or type "paste" to paste code directly):');
             reviewStep = 2;
         } else if (reviewStep === 2) {
-            const url = userMessage.trim();
-            if (!url.startsWith('http') || !url.includes('github.com')) {
-                addMessage('agent', 'Please provide a valid GitHub URL (e.g. https://github.com/username/repo)');
-                return;
-            }
-            reviewData.github_url = url;
+            reviewData.github_url = userMessage.trim();
+            addMessage('agent', `Ready to review!\n\nAgent: ${reviewData.agent_id}\nGitHub: ${reviewData.github_url}\nCost: 500 sats\n\nType "confirm" to proceed.`);
             reviewStep = 3;
-            
-            const confirmDiv = document.createElement('div');
-            confirmDiv.className = 'az-msg az-msg-agent';
-            confirmDiv.innerHTML = `
-                <div>Ready to review!<br><br>
-                <b>Agent:</b> ${reviewData.agent_id}<br>
-                <b>GitHub:</b> ${reviewData.github_url}<br>
-                <b>Cost:</b> ${reviewData.review_price || 500} sats<br><br>
-                <button id="az-confirm-review-btn" 
-                    style="width:100%;padding:10px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold">
-                    ⚡ Confirm & Pay ${reviewData.review_price || 500} sats
-                </button>
-                <button id="az-cancel-review-btn" 
-                    style="width:100%;margin-top:8px;padding:8px;background:transparent;color:#8b949e;border:1px solid #30363d;border-radius:6px;cursor:pointer">
-                    Cancel
-                </button>
-                </div>
-            `;
-            document.getElementById('az-transcript').appendChild(confirmDiv);
-            document.getElementById('az-transcript').scrollTop = 99999;
-            
-            document.getElementById('az-confirm-review-btn').addEventListener('click', function() {
-                this.disabled = true;
-                this.textContent = 'Processing...';
-                reviewStep = 0;
-                submitCodeReview();
-            });
-            
-            document.getElementById('az-cancel-review-btn').addEventListener('click', function() {
-                reviewStep = 0;
-                reviewData = {};
-                cachedAgents = [];
-                addMessage('agent', 'Code review cancelled.');
-            });
-            return;
+        } else if (reviewStep === 3 && userMessage.toLowerCase() === 'confirm') {
+            reviewStep = 0;
+            submitCodeReview();
         }
     }
 
     async function submitCodeReview() {
-        const reviewCost = reviewData.review_price || 500;
-        addMessage('agent', `⚡ Generating Lightning invoice for ${reviewCost} sats...`);
+        addMessage('agent', '⚡ Generating Lightning invoice for 500 sats...');
         
         // Step 1: Create Lightning invoice
         const timestamp = Date.now();
@@ -335,9 +275,9 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 user_id: `review_${reviewData.agent_id}`,
-                amount_sats: reviewCost,
-                memo: `Code review for ${reviewData.agent_id || reviewData.github_url}`,
-                external_ref: `review_${reviewData.agent_id || 'generic'}_${timestamp}`
+                amount_sats: 500,
+                memo: `Code review for ${reviewData.agent_id}`,
+                external_ref: `review_${reviewData.agent_id}_${timestamp}`
             })
         });
         const depositData = await depositRes.json();
@@ -392,7 +332,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            const statusRes = await fetch(`${API_BASE}/payments/status/${engineInvoiceRef}?user_id=review_${reviewData.agent_id}&amount_sats=${reviewCost}`);
+            const statusRes = await fetch(`${API_BASE}/payments/status/${engineInvoiceRef}?user_id=review_${reviewData.agent_id}&amount_sats=500`);
             const statusData = await statusRes.json();
             
             if (statusData.status === 'paid') {
@@ -449,14 +389,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const text = input.value.trim();
         if (!text) return;
 
-        // Intent detection for code review
-        const lowText = text.toLowerCase();
-        const isReviewIntent = lowText.includes('code review') || 
-                               lowText.includes('security review') ||
-                               lowText.includes('verified badge') ||
-                               lowText.includes('get verified');
-
-        if (reviewStep > 0 || isReviewIntent) {
+        if (text.toLowerCase().includes('review') || 
+            text.toLowerCase().includes('verified') || 
+            text.toLowerCase().includes('badge') ||
+            reviewStep > 0) {
             addMessage('user', text);
             input.value = '';
             handleCodeReview(text);
@@ -556,15 +492,9 @@ Be concise, friendly, and Bitcoin-native in tone.`;
                 addMessage('agent', greeting);
                 messages.push({ role: 'assistant', content: greeting });
                 showQuickReplies([
-                    { text: "🔒 Code Review (500 sats)", action: () => { 
-                        reviewStep = 0; 
-                        reviewData = {};
-                        cachedAgents = [];
-                        handleCodeReview('start'); 
-                    } },
-                    { text: "💰 Withdrawal help" },
-                    { text: "💡 Improve my listing" },
-                    { text: "📊 Pricing advice" }
+                    { text: "🔒 Start Code Review", action: () => { handleCodeReview(''); } },
+                    { text: "💡 Tips for my agents" },
+                    { text: "💰 Withdrawal help" }
                 ]);
                 return;
             }
