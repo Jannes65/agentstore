@@ -240,25 +240,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (reviewStep === 0) {
             const builderId = sessionStorage.getItem('builder_id');
             if (!builderId) {
-                // Non-builder — offer generic review at 50,000 sats
-                const confirmDiv = document.createElement('div');
-                confirmDiv.className = 'az-msg az-msg-agent';
-                confirmDiv.innerHTML = `
-                    <div>
-                    🔒 <b>Generic Security Review</b><br><br>
-                    No agent listing required. Get a full security audit of any GitHub repository.<br><br>
-                    <b>Cost:</b> 50,000 sats (~$${(50000 * usdPerSat).toFixed(2)})<br>
-                    <b>Includes:</b> Full security report, no marketplace badge<br><br>
-                    To get a <b>Verified badge</b> for a listed agent (500 sats), 
-                    <a href="/dashboard.html" style="color:#f7931a">go to your Builder Dashboard →</a><br><br>
-                    Paste your GitHub URL to continue with the generic review:
-                    </div>
-                `;
-                document.getElementById('az-transcript').appendChild(confirmDiv);
-                document.getElementById('az-transcript').scrollTop = 99999;
-                reviewData.isGenericReview = true;
-                reviewData.reviewCost = 50000;
-                reviewStep = 2; // Skip to GitHub URL step
+                // Non-builder review — 50,000 sats, no badge
+                addMessage('agent', `🔒 **Generic Security Review — 50,000 sats (~$${(50000 * usdPerSat).toFixed(2)})**\n\nNo AgentStore account needed. Paste any GitHub URL for a full security audit.\n\nNote: No Verified badge is awarded for generic reviews — badges are exclusive to listed AgentStore agents.\n\nPaste your GitHub URL to continue:`);
+                reviewStep = 2;
+                reviewData.agent_id = 'generic_review';
+                reviewData.review_price = 50000;
                 return;
             }
             // Builder flow — fetch agents
@@ -273,6 +259,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const list = cachedAgents.map(a => `• ${a.name}`).join('\n');
                     addMessage('agent', `Which agent would you like reviewed?\n\n${list}\n\nReply with the agent name. (Type "cancel" to stop)`);
                     reviewStep = 1;
+                    reviewData.review_price = 500;
                 })
                 .catch(err => {
                     addMessage('agent', 'Error loading agents. Please try again.');
@@ -306,10 +293,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div>Ready to review!<br><br>
                 <b>Agent:</b> ${reviewData.agent_id}<br>
                 <b>GitHub:</b> ${reviewData.github_url}<br>
-                <b>Cost:</b> ${reviewData.reviewCost || 500} sats<br><br>
+                <b>Cost:</b> ${reviewData.review_price || 500} sats<br><br>
                 <button id="az-confirm-review-btn" 
                     style="width:100%;padding:10px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold">
-                    ⚡ Confirm & Pay ${reviewData.reviewCost || 500} sats
+                    ⚡ Confirm & Pay ${reviewData.review_price || 500} sats
                 </button>
                 <button id="az-cancel-review-btn" 
                     style="width:100%;margin-top:8px;padding:8px;background:transparent;color:#8b949e;border:1px solid #30363d;border-radius:6px;cursor:pointer">
@@ -338,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function submitCodeReview() {
-        const reviewCost = reviewData.reviewCost || 500;
+        const reviewCost = reviewData.review_price || 500;
         addMessage('agent', `⚡ Generating Lightning invoice for ${reviewCost} sats...`);
         
         // Step 1: Create Lightning invoice
@@ -467,10 +454,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const isReviewIntent = lowText.includes('code review') || 
                                lowText.includes('security review') ||
                                lowText.includes('verified badge') ||
-                               lowText.includes('get verified') ||
-                               lowText.includes('audit my code');
+                               lowText.includes('get verified');
 
-        if (isReviewIntent || reviewStep > 0) {
+        if (reviewStep > 0 || isReviewIntent) {
             addMessage('user', text);
             input.value = '';
             handleCodeReview(text);
