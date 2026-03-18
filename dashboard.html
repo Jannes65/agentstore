@@ -213,6 +213,10 @@
     <script>
         const API_BASE = 'https://agentstore-production.up.railway.app';
         let currentBuilderId = sessionStorage.getItem('builder_id') || localStorage.getItem('builderId');
+        if (currentBuilderId) {
+            sessionStorage.setItem('builder_id', currentBuilderId);
+            sessionStorage.setItem('user_id', currentBuilderId);
+        }
         let usdPerSat = 0.00075; // default fallback
 
         async function fetchBTCPrice() {
