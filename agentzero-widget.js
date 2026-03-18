@@ -315,32 +315,35 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Step 2: Show invoice to builder
         const shortInvoice = paymentRequest.substring(0, 20) + '...' + paymentRequest.substring(paymentRequest.length - 10);
-        addMessage('agent', `💳 Pay this Lightning invoice to start your review:\n\n${shortInvoice}\n\n[Tap to copy full invoice]`, false);
+        addMessage('agent', `💳 Pay this Lightning invoice to start your review:\n\n${shortInvoice}\n\n👇 Scroll down to copy the invoice or scan the QR code`, false);
         
         // Create copy button and QR
         const invoiceDiv = document.createElement('div');
         invoiceDiv.className = 'az-msg az-msg-agent';
         invoiceDiv.innerHTML = `
             <div style="background:#161b22;padding:12px;border-radius:8px;border:1px solid #f7931a">
-                <div id="az-review-qr" style="margin-bottom:8px"></div>
+                <p style="color:#c9d1d9;margin:0 0 8px 0;font-size:13px">⚡ Pay 500 sats to start review:</p>
+                <div id="az-review-qr-${timestamp}" style="background:white;padding:8px;border-radius:4px;display:inline-block;width:100%"></div>
                 <input readonly value="${paymentRequest}" 
-                    style="width:100%;padding:6px;background:#0d1117;color:#8b949e;border:1px solid #30363d;border-radius:4px;font-size:10px">
+                    style="width:100%;margin-top:8px;padding:6px;background:#0d1117;color:#8b949e;border:1px solid #30363d;border-radius:4px;font-size:9px;word-break:break-all">
                 <button class="az-copy-invoice-btn" data-invoice="${paymentRequest}"
-                    style="width:100%;margin-top:8px;padding:8px;background:#f7931a;color:white;border:none;border-radius:4px;cursor:pointer">
-                    📋 Copy Invoice
+                    style="width:100%;margin-top:8px;padding:10px;background:#f7931a;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold">
+                    📋 Copy Full Invoice
                 </button>
-                <div id="az-poll-status" style="margin-top:8px;color:#8b949e;font-size:12px">⏳ Waiting for payment...</div>
+                <div id="az-poll-status-${timestamp}" style="margin-top:8px;color:#8b949e;font-size:12px;text-align:center">
+                    ⏳ Waiting for payment...
+                </div>
             </div>
         `;
         document.getElementById('az-transcript').appendChild(invoiceDiv);
         
         // Generate QR code
         if (typeof QRCode !== 'undefined') {
-            new QRCode(document.getElementById('az-review-qr'), {
+            new QRCode(document.getElementById(`az-review-qr-${timestamp}`), {
                 text: 'lightning:' + paymentRequest,
-                width: 200,
-                height: 200,
-                correctLevel: QRCode.CorrectLevel.L
+                width: 280,
+                height: 280,
+                correctLevel: QRCode.CorrectLevel.M
             });
         }
         
@@ -351,7 +354,8 @@ document.addEventListener('DOMContentLoaded', function() {
             attempts++;
             if (attempts > maxAttempts) {
                 clearInterval(pollInterval);
-                document.getElementById('az-poll-status').textContent = '❌ Payment timeout. Please try again.';
+                const statusEl = document.getElementById(`az-poll-status-${timestamp}`);
+                if (statusEl) statusEl.textContent = '❌ Payment timeout. Please try again.';
                 return;
             }
             
@@ -360,7 +364,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (statusData.status === 'paid') {
                 clearInterval(pollInterval);
-                document.getElementById('az-poll-status').textContent = '✅ Payment confirmed! Running security review...';
+                const statusEl = document.getElementById(`az-poll-status-${timestamp}`);
+                if (statusEl) statusEl.textContent = '✅ Payment confirmed! Running security review...';
                 
                 // Step 4: Run review
                 const reviewRes = await fetch(`${API_BASE}/agents/review`, {
