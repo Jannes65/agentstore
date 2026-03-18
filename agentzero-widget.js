@@ -217,6 +217,16 @@ document.addEventListener('DOMContentLoaded', function() {
     let reviewData = {};
     let cachedAgents = [];
     const API_BASE = "https://agentstore-production.up.railway.app";
+    const path = window.location.pathname || '';
+    const currentPage = path.split('/').pop() || 'index.html';
+
+    async function fetchBTCPrice() {
+        try {
+            const r = await fetch(`${API_BASE}/btc-price`);
+            const d = await r.json();
+            usdPerSat = d.usd / 100000000;
+        } catch(e) {}
+    }
 
     function handleCodeReview(userMessage) {
         if (userMessage.toLowerCase() === 'cancel') {
@@ -230,20 +240,38 @@ document.addEventListener('DOMContentLoaded', function() {
         if (reviewStep === 0) {
             const builderId = sessionStorage.getItem('builder_id');
             if (!builderId) {
-                addMessage('agent', 'Please log into your Builder Dashboard first.');
+                // Non-builder — offer generic review at 50,000 sats
+                const confirmDiv = document.createElement('div');
+                confirmDiv.className = 'az-msg az-msg-agent';
+                confirmDiv.innerHTML = `
+                    <div>
+                    🔒 <b>Generic Security Review</b><br><br>
+                    No agent listing required. Get a full security audit of any GitHub repository.<br><br>
+                    <b>Cost:</b> 50,000 sats (~$${(50000 * usdPerSat).toFixed(2)})<br>
+                    <b>Includes:</b> Full security report, no marketplace badge<br><br>
+                    To get a <b>Verified badge</b> for a listed agent (500 sats), 
+                    <a href="/dashboard.html" style="color:#f7931a">go to your Builder Dashboard →</a><br><br>
+                    Paste your GitHub URL to continue with the generic review:
+                    </div>
+                `;
+                document.getElementById('az-transcript').appendChild(confirmDiv);
+                document.getElementById('az-transcript').scrollTop = 99999;
+                reviewData.isGenericReview = true;
+                reviewData.reviewCost = 50000;
+                reviewStep = 2; // Skip to GitHub URL step
                 return;
             }
-            // Get agent ID
+            // Builder flow — fetch agents
             fetch(`${API_BASE}/builders/${builderId}`)
                 .then(r => r.json())
                 .then(data => {
                     cachedAgents = data.agents || [];
                     if (cachedAgents.length === 0) {
-                        addMessage('agent', 'No agents found. Please submit an agent first.');
+                        addMessage('agent', 'No agents found. Please submit an agent first at /submit.html');
                         return;
                     }
-                    const list = cachedAgents.map(a => `• ${a.name} (ID: ${a.id})`).join('\n');
-                    addMessage('agent', `Select an agent to review:\n\n${list}\n\nReply with the Agent ID or name. (Type "cancel" to stop)`);
+                    const list = cachedAgents.map(a => `• ${a.name}`).join('\n');
+                    addMessage('agent', `Which agent would you like reviewed?\n\n${list}\n\nReply with the agent name. (Type "cancel" to stop)`);
                     reviewStep = 1;
                 })
                 .catch(err => {
@@ -278,10 +306,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div>Ready to review!<br><br>
                 <b>Agent:</b> ${reviewData.agent_id}<br>
                 <b>GitHub:</b> ${reviewData.github_url}<br>
-                <b>Cost:</b> 500 sats<br><br>
+                <b>Cost:</b> ${reviewData.reviewCost || 500} sats<br><br>
                 <button id="az-confirm-review-btn" 
                     style="width:100%;padding:10px;background:#f7931a;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold">
-                    ⚡ Confirm & Pay 500 sats
+                    ⚡ Confirm & Pay ${reviewData.reviewCost || 500} sats
                 </button>
                 <button id="az-cancel-review-btn" 
                     style="width:100%;margin-top:8px;padding:8px;background:transparent;color:#8b949e;border:1px solid #30363d;border-radius:6px;cursor:pointer">
@@ -310,7 +338,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function submitCodeReview() {
-        addMessage('agent', '⚡ Generating Lightning invoice for 500 sats...');
+        const reviewCost = reviewData.reviewCost || 500;
+        addMessage('agent', `⚡ Generating Lightning invoice for ${reviewCost} sats...`);
         
         // Step 1: Create Lightning invoice
         const timestamp = Date.now();
@@ -319,9 +348,9 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 user_id: `review_${reviewData.agent_id}`,
-                amount_sats: 500,
-                memo: `Code review for ${reviewData.agent_id}`,
-                external_ref: `review_${reviewData.agent_id}_${timestamp}`
+                amount_sats: reviewCost,
+                memo: `Code review for ${reviewData.agent_id || reviewData.github_url}`,
+                external_ref: `review_${reviewData.agent_id || 'generic'}_${timestamp}`
             })
         });
         const depositData = await depositRes.json();
@@ -376,7 +405,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            const statusRes = await fetch(`${API_BASE}/payments/status/${engineInvoiceRef}?user_id=review_${reviewData.agent_id}&amount_sats=500`);
+            const statusRes = await fetch(`${API_BASE}/payments/status/${engineInvoiceRef}?user_id=review_${reviewData.agent_id}&amount_sats=${reviewCost}`);
             const statusData = await statusRes.json();
             
             if (statusData.status === 'paid') {
@@ -435,10 +464,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Intent detection for code review
         const lowText = text.toLowerCase();
-        const isReviewIntent = lowText.includes('review') || 
-                               lowText.includes('verified') || 
-                               lowText.includes('badge') ||
-                               lowText.includes('audit');
+        const isReviewIntent = lowText.includes('code review') || 
+                               lowText.includes('security review') ||
+                               lowText.includes('verified badge') ||
+                               lowText.includes('get verified') ||
+                               lowText.includes('audit my code');
 
         if (isReviewIntent || reviewStep > 0) {
             addMessage('user', text);
