@@ -229,6 +229,15 @@ class DepositRequest(BaseModel):
 async def startup_event():
     """Initialize database and pre-populate with dummy agents if empty."""
     init_db()
+    
+    # Migration: add reviewed column if it doesn't exist
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS reviewed BOOLEAN DEFAULT FALSE"))
+            conn.commit()
+        except Exception:
+            pass
+
     db = next(get_db())
     existing_agents = get_all_agents(db)
     if not existing_agents:
