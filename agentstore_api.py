@@ -7,6 +7,7 @@ import uvicorn
 import os
 import time
 import httpx
+import logging
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -145,6 +146,10 @@ RECOMMENDATIONS:
         review_data = response.json()
         review_report = review_data["content"][0]["text"]
     
+    logging.warning(f"Review rating: {review_report[:100]}")
+    logging.warning(f"SAFE check: {'RATING: SAFE' in review_report}")
+    logging.warning(f"CAUTION check: {'RATING: CAUTION' in review_report}")
+    
     # Award badge based on rating
     badge_awarded = False
     badge_type = "none"
@@ -168,6 +173,7 @@ RECOMMENDATIONS:
             if agent:
                 agent.reviewed = True
                 db.commit()
+                logging.warning(f"Set reviewed=True for agent {agent_id}")
                 badge_type = "reviewed"
         finally:
             db.close()
