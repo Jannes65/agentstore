@@ -520,7 +520,12 @@ Be concise, friendly, and Bitcoin-native in tone.`;
                 addMessage('agent', greeting);
                 messages.push({ role: 'assistant', content: greeting });
                 showQuickReplies([
-                    { text: "🔒 Start Code Review", action: () => { handleCodeReview(''); } },
+                    { text: "🔒 Start Code Review", action: () => { 
+                        reviewStep = 0;
+                        reviewData = {};
+                        cachedAgents = [];
+                        handleCodeReview('start'); 
+                    } },
                     { text: "💡 Tips for my agents" },
                     { text: "💰 Withdrawal help" }
                 ]);
