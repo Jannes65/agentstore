@@ -240,6 +240,7 @@ async def startup_event():
     with engine.connect() as conn:
         try:
             conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS reviewed BOOLEAN DEFAULT FALSE"))
+            conn.execute(text("CREATE TABLE IF NOT EXISTS behaviour_logs (id SERIAL PRIMARY KEY, user_id VARCHAR, agent_id VARCHAR, agent_name VARCHAR, task VARCHAR, result_summary VARCHAR, cost_sats INTEGER DEFAULT 0, status VARCHAR DEFAULT 'success', created_at TIMESTAMP DEFAULT NOW())"))
             conn.commit()
         except Exception:
             pass
@@ -512,6 +513,20 @@ async def reset_balance(user_id: str):
     from agentstore_ledger import reset_user_balance
     reset_user_balance(user_id)
     return {"status": "reset", "user_id": user_id}
+
+@app.get("/users/{user_id}/history")
+async def get_user_history(user_id: str):
+    from agentstore_database import SessionLocal, BehaviourLog
+    db = SessionLocal()
+    try:
+        logs = db.query(BehaviourLog).filter(
+            BehaviourLog.user_id == user_id
+        ).order_by(BehaviourLog.created_at.desc()).limit(50).all()
+        return [{"id": l.id, "agent_name": l.agent_name, "task": l.task, 
+                 "result_summary": l.result_summary, "cost_sats": l.cost_sats,
+                 "status": l.status, "created_at": str(l.created_at)} for l in logs]
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

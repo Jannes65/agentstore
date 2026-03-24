@@ -128,6 +128,23 @@ class Marketplace:
             # 5. Credit builder 80%
             credit_agent(agent_id, int(agent.price_sats * 0.8))
             
+            # 5.5 Log behaviour
+            from agentstore_database import BehaviourLog
+            try:
+                log = BehaviourLog(
+                    user_id=user_id,
+                    agent_id=agent_id,
+                    agent_name=agent.name,
+                    task=task[:200] if task else "run",
+                    result_summary=str(result)[:500] if result else "",
+                    cost_sats=agent.price_sats,
+                    status="success"
+                )
+                db.add(log)
+                db.commit()
+            except Exception as e:
+                print(f"Failed to log behaviour: {e}")
+
             # 6. Return result
             return {"status": "success", "result": result}
         finally:

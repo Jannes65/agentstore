@@ -473,6 +473,7 @@
             <input type="text" class="search-bar" placeholder="Search agents..." id="searchInput">
         </div>
         <div style="display: flex; gap: 1rem; align-items: center;">
+            <button class="btn btn-outline" style="text-decoration: none; border-color: var(--accent-color); color: var(--accent-color);" onclick="showHistory()">📋 My History</button>
             <a href="./dashboard.html" class="btn btn-outline" style="text-decoration: none; border-color: var(--accent-color); color: var(--accent-color);">Builder Login</a>
             <a href="./agentzero.html" class="btn btn-outline" style="text-decoration: none; border-color: var(--accent-color); color: var(--accent-color);">Chat with AgentZero</a>
             <a href="./submit.html" class="btn btn-outline" style="text-decoration: none; border-color: var(--accent-color); color: var(--accent-color);">List Your Agent →</a>
@@ -678,6 +679,8 @@
         </div>
     </div>
 
+    <div id="historyModal" class="modal" style="display:none"></div>
+
     <script>
         let usdPerSat = 0.00075; // fallback
         async function fetchBTCPrice() {
@@ -688,6 +691,45 @@
             } catch(e) { /* keep fallback */ }
         }
         const API_BASE = "https://agentstore-production.up.railway.app";
+        
+        async function showHistory() {
+            const userId = sessionStorage.getItem('user_id');
+            if (!userId) {
+                alert('Enter your Wallet ID first to see history');
+                return;
+            }
+            const res = await fetch(`${API_BASE}/users/${userId}/history`);
+            const logs = await res.json();
+            if (logs.length === 0) {
+                alert('No history yet. Run an agent first!');
+                return;
+            }
+            const historyHtml = logs.map(l => 
+                `<tr>
+                    <td style="padding:10px;border-bottom:1px solid #30363d">${new Date(l.created_at).toLocaleDateString()}</td>
+                    <td style="padding:10px;border-bottom:1px solid #30363d">${l.agent_name}</td>
+                    <td style="padding:10px;border-bottom:1px solid #30363d">${l.cost_sats} sats</td>
+                    <td style="padding:10px;border-bottom:1px solid #30363d"><span style="color:${l.status==='success'?'#3fb950':'#f85149'}">${l.status}</span></td>
+                </tr>`
+            ).join('');
+            // Show in a modal
+            document.getElementById('historyModal').innerHTML = `
+                <div class="modal-content" style="max-width:600px; background:#0d1117; color:#c9d1d9; border:1px solid #30363d">
+                    <h3 style="color:white; margin-top:0">My Run History</h3>
+                    <table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem">
+                        <thead><tr style="text-align:left;color:#8b949e;font-size:0.9rem">
+                            <th style="padding:10px;border-bottom:2px solid #30363d">Date</th>
+                            <th style="padding:10px;border-bottom:2px solid #30363d">Agent</th>
+                            <th style="padding:10px;border-bottom:2px solid #30363d">Cost</th>
+                            <th style="padding:10px;border-bottom:2px solid #30363d">Status</th>
+                        </tr></thead>
+                        <tbody>${historyHtml}</tbody>
+                    </table>
+                    <button class="btn btn-outline" style="width:100%" onclick="document.getElementById('historyModal').style.display='none'">Close</button>
+                </div>
+            `;
+            document.getElementById('historyModal').style.display = 'flex';
+        }
         const agentGrid = document.getElementById('agentGrid');
         const categoryFilter = document.getElementById('categoryFilter');
         const verifiedFilter = document.getElementById('verifiedFilter');

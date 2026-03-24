@@ -85,6 +85,18 @@ class LedgerTransaction(Base):
     agent_id = Column(String, index=True, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class BehaviourLog(Base):
+    __tablename__ = "behaviour_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, index=True)
+    agent_id = Column(String, index=True)
+    agent_name = Column(String, nullable=True)
+    task = Column(String, nullable=True)
+    result_summary = Column(String, nullable=True)
+    cost_sats = Column(Integer, default=0)
+    status = Column(String, default="success")  # success/failed/refunded
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 
