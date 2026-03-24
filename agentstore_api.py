@@ -241,87 +241,19 @@ async def startup_event():
         try:
             conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS reviewed BOOLEAN DEFAULT FALSE"))
             conn.execute(text("CREATE TABLE IF NOT EXISTS behaviour_logs (id SERIAL PRIMARY KEY, user_id VARCHAR, agent_id VARCHAR, agent_name VARCHAR, task VARCHAR, result_summary VARCHAR, cost_sats INTEGER DEFAULT 0, status VARCHAR DEFAULT 'success', created_at TIMESTAMP DEFAULT NOW())"))
+            
+            # Run once to clean test data, then remove this block
+            conn.execute(text("DELETE FROM agents WHERE id = 'test_agent_001' AND builder_id = 'test123'"))
+            conn.execute(text("DELETE FROM builders WHERE id = 'test123'"))
+            conn.execute(text("DELETE FROM user_balances WHERE user_id IN ('test_user_001', 'jannes_001')"))
+            conn.execute(text("DELETE FROM behaviour_logs WHERE user_id = 'jannes_001'"))
+            
             conn.commit()
         except Exception:
             pass
 
     db = next(get_db())
     existing_agents = get_all_agents(db)
-    if not existing_agents:
-        # Agent 1: LangChain, Productivity, Verified
-        agent1_data = {
-            "id": "lc_prod_01",
-            "name": "LangChain Productivity",
-            "description_short": "Boost your productivity with LangChain.",
-            "description_long": "A versatile LangChain agent for various productivity tasks.",
-            "category": Category.PRODUCTIVITY.value,
-            "price_sats": 500,
-            "endpoint_url": "http://localhost:8001",
-            "permissions": {"can_read_files": True},
-            "framework": "langchain",
-            "verified": True,
-            "community_rating": 4.9,
-            "task_completion_rate": 0.98
-        }
-        save_agent(db, agent1_data)
-
-        # Agent 2: CrewAI, Research, Not Verified
-        agent2_data = {
-            "id": "crew_res_02",
-            "name": "CrewAI Research",
-            "description_short": "Advanced research via CrewAI.",
-            "description_long": "Collaborative agent crew for deep research projects.",
-            "category": Category.RESEARCH.value,
-            "price_sats": 1200,
-            "endpoint_url": "http://localhost:8002",
-            "permissions": {"can_make_external_calls": True},
-            "framework": "crewai",
-            "verified": False,
-            "community_rating": 4.2,
-            "task_completion_rate": 0.85
-        }
-        save_agent(db, agent2_data)
-
-        # Agent 3: AutoGen, Developer Tools, Verified
-        agent3_data = {
-            "id": "ag_dev_03",
-            "name": "AutoGen Developer",
-            "description_short": "Dev tools powered by AutoGen.",
-            "description_long": "Streamline your development workflow with AutoGen agents.",
-            "category": Category.DEVELOPER_TOOLS.value,
-            "price_sats": 800,
-            "endpoint_url": "http://localhost:8003",
-            "permissions": {"can_read_files": True, "can_write_files": True},
-            "framework": "autogen",
-            "verified": True,
-            "community_rating": 4.7,
-            "task_completion_rate": 0.92
-        }
-        save_agent(db, agent3_data)
-        
-        # Agent 4: Built-in Test Agent
-        agent4_data = {
-            "id": "test_agent_04",
-            "name": "Test Agent",
-            "description_short": "Built-in test agent for verifying functionality.",
-            "description_long": "A simple agent that responds to any task with a confirmation message. Useful for testing and debugging.",
-            "category": Category.PRODUCTIVITY.value,
-            "price_sats": 500,
-            "endpoint_url": "https://agentstore-production.up.railway.app/agents/test-endpoint",
-            "permissions": {},
-            "framework": "builtin",
-            "verified": True,
-            "community_rating": 5.0,
-            "task_completion_rate": 1.0
-        }
-        save_agent(db, agent4_data)
-
-    # Always ensure test_agent_001 has the correct endpoint URL and builder_id
-    with engine.connect() as conn:
-        conn.execute(text("UPDATE agents SET endpoint_url = 'https://agentstore-production.up.railway.app/agents/test-endpoint' WHERE id = 'test_agent_001'"))
-        conn.execute(text("UPDATE agents SET builder_id = 'jannes65' WHERE id = 'test_agent_001'"))
-        conn.execute(text("UPDATE agent_balances SET balance_sats = 4800 WHERE agent_id = 'test_agent_001'"))
-        conn.commit()
 
 @app.put("/agents/{agent_id}")
 async def update_agent(agent_id: str, request: Request):
@@ -507,12 +439,6 @@ async def test_l402_endpoint(request: Request):
         "agent": "L402TestAgent", 
         "result": "L402 payment verified! This agent was accessed via Lightning authentication."
     }
-
-@app.post("/admin/reset-balance/{user_id}")
-async def reset_balance(user_id: str):
-    from agentstore_ledger import reset_user_balance
-    reset_user_balance(user_id)
-    return {"status": "reset", "user_id": user_id}
 
 @app.get("/users/{user_id}/history")
 async def get_user_history(user_id: str):
