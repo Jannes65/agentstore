@@ -161,7 +161,16 @@ RECOMMENDATIONS:
         finally:
             db.close()
     elif "RATING: CAUTION" in review_report:
-        badge_type = "reviewed"
+        from agentstore_database import SessionLocal, Agent
+        db = SessionLocal()
+        try:
+            agent = db.query(Agent).filter(Agent.id == agent_id).first()
+            if agent:
+                agent.reviewed = True
+                db.commit()
+                badge_type = "reviewed"
+        finally:
+            db.close()
     
     return {
         "status": "success",

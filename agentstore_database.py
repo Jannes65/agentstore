@@ -41,6 +41,7 @@ class Agent(Base):
     permissions = Column(JSON)  # Store PermissionScope as JSON
     framework = Column(String)
     verified = Column(Boolean, default=False)
+    reviewed = Column(Boolean, default=False)
     community_rating = Column(Float, default=0.0)
     task_completion_rate = Column(Float, default=0.0)
     created_at = Column(DateTime, default=datetime.utcnow)

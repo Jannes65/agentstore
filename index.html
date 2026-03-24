@@ -365,6 +365,7 @@
 
         .badge-category { background-color: #388bfd26; color: var(--accent-color); }
         .badge-verified { background-color: #23863626; color: #3fb950; }
+        .badge-reviewed { background: #1f6feb; color: white; }
         .badge-community { background-color: #d2992226; color: #e3b341; }
         .badge-unverified { background-color: #f8514926; color: #f85149; }
 
@@ -796,6 +797,7 @@
                 const agentId = agent.id || agent.agent_id;
                 const agentName = agent.name || agentId;
                 const verified = agent.verified || (agent.trust_score && agent.trust_score.verified);
+                const reviewed = agent.reviewed || false;
                 const rating = agent.community_rating || (agent.trust_score && agent.trust_score.community_rating) || 0;
                 const completion = agent.task_completion_rate || (agent.trust_score && agent.trust_score.task_completion_rate) || 0;
 
@@ -804,7 +806,10 @@
                 
                 if (verified) {
                     badgeClass = 'badge-verified';
-                    badgeText = 'Verified';
+                    badgeText = '✅ Verified';
+                } else if (reviewed) {
+                    badgeClass = 'badge-reviewed';
+                    badgeText = '🔍 Reviewed';
                 } else if (rating >= 4.0) {
                     badgeClass = 'badge-community';
                     badgeText = 'Community Rated';
