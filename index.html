@@ -368,6 +368,7 @@
         .badge-reviewed { background: #1f6feb; color: white; }
         .badge-community { background-color: #d2992226; color: #e3b341; }
         .badge-unverified { background-color: #f8514926; color: #f85149; }
+        .badge-nostr { background-color: rgba(139, 92, 246, 0.15); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.3); }
 
         .permissions-list {
             margin-top: 1.5rem;
@@ -669,6 +670,19 @@
                     <button id="manualCheckBtn" class="btn btn-outline" style="width: 100%; margin-top: 1rem; display: none;">I've paid - Try Again</button>
                 </div>
 
+                <div id="nostr-identity-section" style="display: none; background: rgba(139, 92, 246, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3); margin-bottom: 1.5rem;">
+                    <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #f7931a; font-weight: bold; margin-bottom: 0.8rem;">⚡ Sovereign Identity</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="display: inline-block; width: 12px; height: 12px; background: #8b5cf6; border-radius: 50%;"></span>
+                            <span style="color: #c9d1d9; font-size: 0.9rem;">Nostr</span>
+                            <span id="nostr-pubkey-display" style="font-family: monospace; font-size: 0.8rem; color: #8b949e; margin-left: 0.5rem;"></span>
+                            <button id="nostr-copy-btn" title="Copy npub" style="background: none; border: none; color: #8b949e; cursor: pointer; padding: 0 0.3rem; font-size: 1rem;">⧉</button>
+                        </div>
+                        <a id="nostr-pubkey-link" href="#" target="_blank" style="color: #8b5cf6; text-decoration: none; font-size: 0.85rem;">View on Nostr →</a>
+                    </div>
+                </div>
+
                 <button id="runAgentBtn" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Use Agent</button>
             </div>
             
@@ -840,6 +854,7 @@
                 const agentName = agent.name || agentId;
                 const verified = agent.verified || (agent.trust_score && agent.trust_score.verified);
                 const reviewed = agent.reviewed || false;
+                const hasNostr = !!agent.nostr_pubkey;
                 const rating = agent.community_rating || (agent.trust_score && agent.trust_score.community_rating) || 0;
                 const completion = agent.task_completion_rate || (agent.trust_score && agent.trust_score.task_completion_rate) || 0;
 
@@ -857,12 +872,15 @@
                     badgeText = 'Community Rated';
                 }
 
+                const nostrBadge = hasNostr ? `<span class="badge badge-nostr">⬡ Nostr</span>` : '';
+
                 return `
                     <div class="agent-card">
                         <div>
                             <div class="agent-name">${agentName}</div>
                             <span class="badge badge-category">${agent.category}</span>
                             <span class="badge ${badgeClass}">${badgeText}</span>
+                            ${nostrBadge}
                             <p style="font-size: 0.9rem; color: #8b949e; margin-top: 0.5rem;">
                                 Rating: ${rating} ★ | Completion: ${Math.round(completion * 100)}%
                             </p>
@@ -888,6 +906,23 @@
             document.getElementById('modalDescription').innerText = agent.description_long || agent.description_short || "No description provided.";
             document.getElementById('modalPrice').innerText = `${agent.price_sats} SATS (~$${(agent.price_sats * usdPerSat).toFixed(2)})`;
             
+            // Nostr identity section
+            const nostrSection = document.getElementById('nostr-identity-section');
+            if (agent.nostr_pubkey) {
+                const npub = agent.nostr_pubkey;
+                const short = npub.slice(0, 12) + '...' + npub.slice(-6);
+                document.getElementById('nostr-pubkey-display').textContent = short;
+                document.getElementById('nostr-pubkey-link').href = `https://njump.me/${npub}`;
+                document.getElementById('nostr-copy-btn').onclick = () => {
+                    navigator.clipboard.writeText(npub);
+                    document.getElementById('nostr-copy-btn').textContent = '✓';
+                    setTimeout(() => document.getElementById('nostr-copy-btn').textContent = '⧉', 1500);
+                };
+                nostrSection.style.display = 'block';
+            } else {
+                nostrSection.style.display = 'none';
+            }
+
             // Build Permissions Section
             const perms = agent.permissions || {};
             // Support both old and new field names
