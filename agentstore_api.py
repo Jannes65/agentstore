@@ -241,6 +241,13 @@ async def startup_event():
         try:
             conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS reviewed BOOLEAN DEFAULT FALSE"))
             conn.execute(text("CREATE TABLE IF NOT EXISTS behaviour_logs (id SERIAL PRIMARY KEY, user_id VARCHAR, agent_id VARCHAR, agent_name VARCHAR, task VARCHAR, result_summary VARCHAR, cost_sats INTEGER DEFAULT 0, status VARCHAR DEFAULT 'success', created_at TIMESTAMP DEFAULT NOW())"))
+            
+            # Temporary cleanup: Keep only 'AI Detector' and 'AgentZero'
+            conn.execute(text("DELETE FROM agents WHERE name NOT IN ('AI Detector', 'AgentZero')"))
+            conn.execute(text("DELETE FROM agent_balances WHERE agent_id NOT IN (SELECT id FROM agents)"))
+            conn.execute(text("DELETE FROM behaviour_logs WHERE agent_id NOT IN (SELECT id FROM agents)"))
+            conn.execute(text("DELETE FROM execution_logs WHERE agent_id NOT IN (SELECT id FROM agents)"))
+            
             conn.commit()
         except Exception:
             pass
