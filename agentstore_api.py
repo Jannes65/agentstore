@@ -264,21 +264,6 @@ async def update_agent(agent_id: str, request: Request):
     finally:
         db.close()
 
-@app.get("/admin/get-nostr-keys/{agent_id}")
-async def get_nostr_keys(agent_id: str):
-    from agentstore_database import SessionLocal, Agent
-    db = SessionLocal()
-    try:
-        agent = db.query(Agent).filter(Agent.id == agent_id).first()
-        if not agent:
-            raise HTTPException(status_code=404, detail="Agent not found")
-        return {
-            "id": agent.id,
-            "nostr_pubkey": agent.nostr_pubkey,
-            "nostr_privkey": agent.nostr_privkey
-        }
-    finally:
-        db.close()
 
 @app.get("/agents")
 async def get_agents(

@@ -60,6 +60,8 @@ def publish_agent_to_nostr(agent: dict, nostr_privkey: str) -> bool:
         for relay in NOSTR_RELAYS:
             relay_manager.add_relay(relay)
 
+        relay_manager.open_connections()
+        time.sleep(1)  # allow connections to establish
         relay_manager.publish_event(event)
         time.sleep(2)  # allow publish to complete
         relay_manager.close_connections()
@@ -67,5 +69,7 @@ def publish_agent_to_nostr(agent: dict, nostr_privkey: str) -> bool:
         return True
 
     except Exception as e:
+        import traceback
         print(f"Nostr publish failed: {e}")
+        traceback.print_exc()
         return False
