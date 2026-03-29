@@ -245,35 +245,6 @@ async def startup_event():
         except Exception:
             pass
 
-@app.post("/admin/force-cleanup")
-async def force_cleanup():
-    from agentstore_database import SessionLocal, Agent
-    from agentstore_nostr import generate_agent_keypair
-    db = SessionLocal()
-    try:
-        # 1. Remove test_agent_001 (and its dependencies)
-        db.execute(text("DELETE FROM behaviour_logs WHERE agent_id = 'test_agent_001'"))
-        db.execute(text("DELETE FROM execution_logs WHERE agent_id = 'test_agent_001'"))
-        db.execute(text("DELETE FROM agent_balances WHERE agent_id = 'test_agent_001'"))
-        db.execute(text("DELETE FROM agents WHERE id = 'test_agent_001'"))
-        
-        # 2. Backfill Nostr keys
-        agents_to_backfill = db.query(Agent).filter(Agent.nostr_pubkey == None).all()
-        results = []
-        for agent in agents_to_backfill:
-            keys = generate_agent_keypair()
-            agent.nostr_pubkey = keys["nostr_pubkey"]
-            agent.nostr_privkey = keys["nostr_privkey"]
-            results.append(agent.id)
-        
-        db.commit()
-        return {"status": "success", "removed": "test_agent_001", "backfilled": results}
-    except Exception as e:
-        db.rollback()
-        return {"status": "error", "detail": str(e)}
-    finally:
-        db.close()
-
 @app.put("/agents/{agent_id}")
 async def update_agent(agent_id: str, request: Request):
     body = await request.json()
