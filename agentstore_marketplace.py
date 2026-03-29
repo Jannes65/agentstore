@@ -96,7 +96,8 @@ class Marketplace:
         # 1. Get agent
         from agentstore_database import SessionLocal, Agent
         from agentstore_ledger import get_balance, deduct_balance, credit_agent, credit_balance
-        import httpx
+        from agentstore_payments import pay_lightning_invoice
+        import logging
 
         db = SessionLocal()
         try:
@@ -112,16 +113,50 @@ class Marketplace:
             # 3. Deduct from user balance
             deduct_balance(user_id, agent.price_sats)
             
-            # 4. Call agent endpoint — NO L402 handling for now, just direct call
+            # 4. Call agent endpoint
             try:
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    response = await client.post(
-                        agent.endpoint_url, 
-                        json={"task": task, "user_id": user_id}
-                    )
-                    result = response.json()
+                # First attempt — no auth
+                logging.warning(f"Starting execution of agent {agent_id} for user {user_id}")
+                l402_res = await call_agent_endpoint(agent.endpoint_url, task, user_id)
+                
+                if l402_res.get("status") == "l402_required":
+                    # L402 detected!
+                    invoice = l402_res.get("lightning_invoice")
+                    macaroon = l402_res.get("macaroon")
+                    logging.warning(f"L402 detected for agent {agent_id}. Invoice: {invoice[:20]}...")
+                    
+                    # Call pay_lightning_invoice(invoice) → get preimage
+                    try:
+                        preimage = await pay_lightning_invoice(invoice, agent_id)
+                        logging.warning(f"L402 payment successful, retrying with auth for agent {agent_id}")
+                        
+                        # Retry POST to endpoint_url with header: Authorization: L402 {macaroon}:{preimage}
+                        auth_header = {"Authorization": f"L402 {macaroon}:{preimage}"}
+                        retry_res = await call_agent_endpoint_with_auth(agent.endpoint_url, task, user_id, auth_header)
+                        
+                        if retry_res.get("status") != "success":
+                            logging.error(f"L402 retry failed for agent {agent_id}: {retry_res.get('result')}")
+                            # Refund user balance
+                            credit_balance(user_id, agent.price_sats)
+                            return retry_res
+                        
+                        result = retry_res.get("result")
+                    except Exception as pay_err:
+                        logging.error(f"L402 payment/retry error for agent {agent_id}: {str(pay_err)}")
+                        # Refund user balance
+                        credit_balance(user_id, agent.price_sats)
+                        return {"status": "error", "result": f"L402 Error: {str(pay_err)}"}
+                elif l402_res.get("status") == "success":
+                    # Normal agent, no L402
+                    result = l402_res.get("result")
+                else:
+                    # Error from call_agent_endpoint
+                    credit_balance(user_id, agent.price_sats)
+                    return l402_res
+                    
             except Exception as e:
                 # Refund on failure
+                logging.error(f"Unexpected agent error for {agent_id}: {str(e)}")
                 credit_balance(user_id, agent.price_sats)
                 return {"status": "error", "result": f"Agent error: {str(e)}"}
             

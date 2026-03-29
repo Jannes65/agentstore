@@ -59,12 +59,39 @@ async def check_payment(engine_invoice_ref: str):
         logging.warning(f"Chatabit status response: {data}")
         return data
 
-async def pay_lightning_invoice(invoice: str, user_id: str, amount_sats: int) -> dict:
-    # Deduct from internal balance
-    success = deduct_balance(user_id, amount_sats)
-    if not success:
-        return {"status": "error", "message": "Insufficient balance"}
-    # Return mock preimage for L402 header
-    import hashlib
-    preimage = hashlib.sha256(invoice.encode()).hexdigest()
-    return {"status": "success", "preimage": preimage}
+async def pay_lightning_invoice(invoice: str, agent_id: str = "unknown") -> str:
+    """Calls POST {CHATABIT_URL}/subscriptionless-bridge/v1/pay"""
+    try:
+        timestamp = int(time.time())
+        external_ref = f"l402_{agent_id}_{timestamp}"
+        api_key = CHATABIT_API_KEY
+        
+        logging.warning(f"Attempting to pay L402 invoice for agent {agent_id}")
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            response = await client.post(
+                f"{BASE_URL}/pay",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "invoice": invoice,
+                    "externalRef": external_ref
+                }
+            )
+            
+            if response.status_code != 200:
+                logging.error(f"Chatabit payment failed: {response.status_code} {response.text}")
+                raise Exception(f"Chatabit payment failed: {response.text}")
+                
+            data = response.json()
+            preimage = data.get("preimage")
+            if not preimage:
+                logging.error(f"No preimage in Chatabit response: {data}")
+                raise Exception("Chatabit payment succeeded but no preimage was returned")
+                
+            logging.warning(f"L402 payment successful for agent {agent_id}, preimage: {preimage[:10]}...")
+            return preimage
+    except Exception as e:
+        logging.error(f"pay_lightning_invoice error: {str(e)}")
+        raise
