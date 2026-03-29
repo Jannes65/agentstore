@@ -251,7 +251,8 @@ async def force_cleanup():
     from agentstore_nostr import generate_agent_keypair
     db = SessionLocal()
     try:
-        # 1. Remove test_agent_001
+        # 1. Remove test_agent_001 (and its dependencies)
+        db.execute(text("DELETE FROM behaviour_logs WHERE agent_id = 'test_agent_001'"))
         db.execute(text("DELETE FROM agents WHERE id = 'test_agent_001'"))
         
         # 2. Backfill Nostr keys
