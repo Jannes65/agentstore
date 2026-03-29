@@ -236,7 +236,7 @@ async def startup_event():
     """Initialize database and ensure migrations."""
     init_db()
     
-    # Migration: add reviewed column if it doesn't exist
+    # Migration: ensure schema
     with engine.connect() as conn:
         try:
             conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS reviewed BOOLEAN DEFAULT FALSE"))
@@ -244,6 +244,30 @@ async def startup_event():
             conn.commit()
         except Exception:
             pass
+
+    # One-time cleanup and backfill
+    from agentstore_database import SessionLocal, Agent
+    from agentstore_nostr import generate_agent_keypair
+    db = SessionLocal()
+    try:
+        # 1. Remove test_agent_001
+        db.execute(text("DELETE FROM agents WHERE id = 'test_agent_001'"))
+        
+        # 2. Backfill Nostr keys for agents that don't have them
+        agents_to_backfill = db.query(Agent).filter(Agent.nostr_pubkey == None).all()
+        if agents_to_backfill:
+            logging.warning(f"Backfilling Nostr keys for {len(agents_to_backfill)} agents")
+            for agent in agents_to_backfill:
+                keys = generate_agent_keypair()
+                agent.nostr_pubkey = keys["nostr_pubkey"]
+                agent.nostr_privkey = keys["nostr_privkey"]
+        
+        db.commit()
+    except Exception as e:
+        logging.error(f"Error during startup cleanup/backfill: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 @app.put("/agents/{agent_id}")
 async def update_agent(agent_id: str, request: Request):
