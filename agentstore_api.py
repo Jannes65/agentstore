@@ -241,8 +241,21 @@ async def startup_event():
         try:
             conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS reviewed BOOLEAN DEFAULT FALSE"))
             conn.execute(text("CREATE TABLE IF NOT EXISTS behaviour_logs (id SERIAL PRIMARY KEY, user_id VARCHAR, agent_id VARCHAR, agent_name VARCHAR, task VARCHAR, result_summary VARCHAR, cost_sats INTEGER DEFAULT 0, status VARCHAR DEFAULT 'success', created_at TIMESTAMP DEFAULT NOW())"))
+            
+            # Temporary test data seeding for L402 test
+            conn.execute(text("INSERT INTO builders (id, name) VALUES ('jannes65', 'Jannes') ON CONFLICT (id) DO NOTHING"))
+            conn.execute(text("""
+                INSERT INTO agents (id, name, endpoint_url, price_sats, builder_id, category, description_short, verified) 
+                VALUES ('test_l402_agent', 'L402 Test Agent', 'https://agentstore-production.up.railway.app/agents/test-l402-endpoint', 1, 'jannes65', 'Security', 'Testing L402 flow', true) 
+                ON CONFLICT (id) DO UPDATE SET endpoint_url = EXCLUDED.endpoint_url, price_sats = EXCLUDED.price_sats
+            """))
+            conn.execute(text("INSERT INTO user_balances (user_id, balance_sats) VALUES ('jannes_001', 100) ON CONFLICT (user_id) DO NOTHING"))
+            conn.execute(text("UPDATE user_balances SET balance_sats = GREATEST(balance_sats, 10) WHERE user_id = 'jannes_001'"))
+            
             conn.commit()
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.error(f"Startup migration error: {e}")
             pass
 
 @app.put("/agents/{agent_id}")
