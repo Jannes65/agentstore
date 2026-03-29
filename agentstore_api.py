@@ -241,7 +241,6 @@ async def startup_event():
         try:
             conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS reviewed BOOLEAN DEFAULT FALSE"))
             conn.execute(text("CREATE TABLE IF NOT EXISTS behaviour_logs (id SERIAL PRIMARY KEY, user_id VARCHAR, agent_id VARCHAR, agent_name VARCHAR, task VARCHAR, result_summary VARCHAR, cost_sats INTEGER DEFAULT 0, status VARCHAR DEFAULT 'success', created_at TIMESTAMP DEFAULT NOW())"))
-            conn.execute(text("UPDATE agents SET endpoint_url = 'https://agentstore-production.up.railway.app/chat' WHERE name = 'AgentZero'"))
             conn.commit()
         except Exception:
             pass
