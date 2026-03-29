@@ -272,14 +272,60 @@ async def get_agents(
 ):
     """Returns all listings with optional filtering."""
     results = get_all_agents(db, category=category.value if category else None, verified_only=verified_only)
-    return results
+    
+    # Map to hide private keys
+    safe_results = []
+    for agent in results:
+        a_dict = {
+            "id": agent.id,
+            "builder_id": agent.builder_id,
+            "name": agent.name,
+            "description_short": agent.description_short,
+            "description_long": agent.description_long,
+            "category": agent.category,
+            "price_sats": agent.price_sats,
+            "endpoint_url": agent.endpoint_url,
+            "permissions": agent.permissions,
+            "framework": agent.framework,
+            "verified": agent.verified,
+            "reviewed": agent.reviewed,
+            "community_rating": agent.community_rating,
+            "task_completion_rate": agent.task_completion_rate,
+            "nostr_pubkey": agent.nostr_pubkey,
+            "created_at": str(agent.created_at)
+        }
+        safe_results.append(a_dict)
+    return safe_results
 
 @app.get("/agents/top")
 async def get_top_agents(db: Session = Depends(get_db)):
     """Returns top 5 agents by trust score."""
     from agentstore_database import Agent
     results = db.query(Agent).order_by(Agent.community_rating.desc()).limit(5).all()
-    return results
+    
+    # Map to hide private keys
+    safe_results = []
+    for agent in results:
+        a_dict = {
+            "id": agent.id,
+            "builder_id": agent.builder_id,
+            "name": agent.name,
+            "description_short": agent.description_short,
+            "description_long": agent.description_long,
+            "category": agent.category,
+            "price_sats": agent.price_sats,
+            "endpoint_url": agent.endpoint_url,
+            "permissions": agent.permissions,
+            "framework": agent.framework,
+            "verified": agent.verified,
+            "reviewed": agent.reviewed,
+            "community_rating": agent.community_rating,
+            "task_completion_rate": agent.task_completion_rate,
+            "nostr_pubkey": agent.nostr_pubkey,
+            "created_at": str(agent.created_at)
+        }
+        safe_results.append(a_dict)
+    return safe_results
 
 @app.get("/agents/{agent_id}")
 async def get_agent(agent_id: str, db: Session = Depends(get_db)):
@@ -287,7 +333,26 @@ async def get_agent(agent_id: str, db: Session = Depends(get_db)):
     agent = get_agent_db(db, agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent listing not found")
-    return agent
+    
+    # Map to hide private keys
+    return {
+        "id": agent.id,
+        "builder_id": agent.builder_id,
+        "name": agent.name,
+        "description_short": agent.description_short,
+        "description_long": agent.description_long,
+        "category": agent.category,
+        "price_sats": agent.price_sats,
+        "endpoint_url": agent.endpoint_url,
+        "permissions": agent.permissions,
+        "framework": agent.framework,
+        "verified": agent.verified,
+        "reviewed": agent.reviewed,
+        "community_rating": agent.community_rating,
+        "task_completion_rate": agent.task_completion_rate,
+        "nostr_pubkey": agent.nostr_pubkey,
+        "created_at": str(agent.created_at)
+    }
 
 @app.post("/agents/{agent_id}/run")
 async def run_agent_endpoint(agent_id: str, request: Request):

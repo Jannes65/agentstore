@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, JSON, DateTime, ForeignKey, Text
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, JSON, DateTime, ForeignKey, Text, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 
@@ -44,6 +44,8 @@ class Agent(Base):
     reviewed = Column(Boolean, default=False)
     community_rating = Column(Float, default=0.0)
     task_completion_rate = Column(Float, default=0.0)
+    nostr_pubkey = Column(String, nullable=True)
+    nostr_privkey = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     builder = relationship("Builder", back_populates="agents")
@@ -99,6 +101,14 @@ class BehaviourLog(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    # Migrations
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS nostr_pubkey VARCHAR"))
+            conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS nostr_privkey VARCHAR"))
+            conn.commit()
+        except Exception:
+            pass
 
 # --- CRUD Functions ---
 

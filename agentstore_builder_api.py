@@ -12,6 +12,7 @@ from agentstore_marketplace import Listing
 from agentstore_trust import PermissionScope, TrustScore
 from agentstore_database import get_db, save_builder, get_builder as get_builder_db, save_agent, delete_agent_db, SessionLocal, Agent
 from agentstore_ledger import get_agent_balance, deduct_agent
+from agentstore_nostr import generate_agent_keypair
 
 # Storage for builders (deprecated, using agentstore_database instead)
 # builders: Dict[str, dict] = {}
@@ -90,6 +91,9 @@ async def submit_agent(submission: AgentSubmission, db: Session = Depends(get_db
     if get_agent(db, agent_id):
         raise HTTPException(status_code=400, detail="Agent ID already exists")
 
+    # Generate Nostr keypair for agent
+    nostr_keys = generate_agent_keypair()
+    
     agent_data = {
         "id": agent_id,
         "builder_id": builder_id,
@@ -103,7 +107,9 @@ async def submit_agent(submission: AgentSubmission, db: Session = Depends(get_db
         "framework": submission.framework,
         "verified": False,
         "community_rating": 0.0,
-        "task_completion_rate": 0.0
+        "task_completion_rate": 0.0,
+        "nostr_pubkey": nostr_keys["nostr_pubkey"],
+        "nostr_privkey": nostr_keys["nostr_privkey"]
     }
 
     save_agent(db, agent_data)
