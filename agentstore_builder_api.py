@@ -12,7 +12,7 @@ from agentstore_marketplace import Listing
 from agentstore_trust import PermissionScope, TrustScore
 from agentstore_database import get_db, save_builder, get_builder as get_builder_db, save_agent, delete_agent_db, SessionLocal, Agent
 from agentstore_ledger import get_agent_balance, deduct_agent
-from agentstore_nostr import generate_agent_keypair
+from agentstore_nostr import generate_agent_keypair, publish_agent_to_nostr
 
 # Storage for builders (deprecated, using agentstore_database instead)
 # builders: Dict[str, dict] = {}
@@ -117,6 +117,12 @@ async def submit_agent(submission: AgentSubmission, db: Session = Depends(get_db
     # Auto-create agent wallet on submission
     from agentstore_ledger import create_agent_wallet
     create_agent_wallet(agent_id)
+
+    # Publish to Nostr (fire-and-forget)
+    try:
+        publish_agent_to_nostr(agent_data, nostr_keys["nostr_privkey"])
+    except Exception as e:
+        print(f"Failed to publish new agent to Nostr: {e}")
     
     return {"message": "Agent submitted successfully", "agent_id": agent_id}
 

@@ -354,6 +354,38 @@ async def get_agent(agent_id: str, db: Session = Depends(get_db)):
         "created_at": str(agent.created_at)
     }
 
+@app.post("/agents/{agent_id}/publish-nostr")
+async def publish_agent_nostr(agent_id: str, db: Session = Depends(get_db)):
+    """Manually publish an existing agent to Nostr relays."""
+    from agentstore_database import Agent
+    from agentstore_nostr import publish_agent_to_nostr
+    
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    if not agent.nostr_privkey:
+        raise HTTPException(status_code=400, detail="Agent has no Nostr keypair")
+
+    # Prepare agent dict for publisher
+    agent_dict = {
+        "id": agent.id,
+        "name": agent.name,
+        "description_short": agent.description_short,
+        "category": agent.category,
+        "price_sats": agent.price_sats,
+        "endpoint_url": agent.endpoint_url,
+        "framework": agent.framework,
+        "nostr_pubkey": agent.nostr_pubkey
+    }
+    
+    success = publish_agent_to_nostr(agent_dict, agent.nostr_privkey)
+    
+    if success:
+        return {"published": True}
+    else:
+        return {"published": False, "error": "Relay publication failed"}
+
 @app.post("/agents/{agent_id}/run")
 async def run_agent_endpoint(agent_id: str, request: Request):
     body = await request.json()
