@@ -46,6 +46,7 @@ class Agent(Base):
     task_completion_rate = Column(Float, default=0.0)
     nostr_pubkey = Column(String, nullable=True)
     nostr_privkey = Column(String, nullable=True)
+    pricing_notes = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     builder = relationship("Builder", back_populates="agents")
@@ -106,6 +107,7 @@ def init_db():
         try:
             conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS nostr_pubkey VARCHAR"))
             conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS nostr_privkey VARCHAR"))
+            conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS pricing_notes VARCHAR"))
             conn.commit()
         except Exception:
             pass

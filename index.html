@@ -632,6 +632,10 @@
                     <span id="modalPrice" style="font-weight: bold; color: #3fb950; font-size: 1.2rem;"></span>
                 </div>
                 <div style="font-size: 0.85rem; color: #8b949e;">* 80% goes directly to the builder</div>
+                <div id="pricing-notes-section" style="display:none; margin-top:8px;">
+                    <span style="color:#94a3b8; font-size:12px;">ⓘ </span>
+                    <span id="pricing-notes" style="color:#94a3b8; font-size:12px; font-style:italic;"></span>
+                </div>
             </div>
 
             <div id="taskTypeContainer" style="margin-bottom: 1.5rem; display: none;">
@@ -916,6 +920,14 @@
             document.getElementById('modalDescription').innerText = agent.description_long || agent.description_short || "No description provided.";
             document.getElementById('modalPrice').innerText = `${agent.price_sats} SATS (~$${(agent.price_sats * usdPerSat).toFixed(2)})`;
             
+            // Pricing notes section
+            if (agent.pricing_notes) {
+                document.getElementById('pricing-notes').textContent = agent.pricing_notes;
+                document.getElementById('pricing-notes-section').style.display = 'block';
+            } else {
+                document.getElementById('pricing-notes-section').style.display = 'none';
+            }
+
             // Nostr identity section
             const nostrSection = document.getElementById('nostr-identity-section');
             if (agent.nostr_pubkey) {

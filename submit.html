@@ -233,6 +233,11 @@
             </div>
 
             <div class="form-group">
+                <label for="pricing_notes">Pricing Notes (optional)</label>
+                <textarea id="pricing_notes" name="pricing_notes" class="form-control" placeholder='e.g. "Includes 5 free credits. Additional credits purchased inside the app."'></textarea>
+            </div>
+
+            <div class="form-group">
                 <label for="framework">Framework</label>
                 <select id="framework" name="framework" class="form-control" required>
                     <option value="" disabled selected>Select a framework</option>
@@ -334,10 +339,10 @@
             });
 
             const formData = {
-                builder_id: formDataRaw.get('builder_id') || null,
                 name: formDataRaw.get('name'),
                 description_short: formDataRaw.get('description_short'),
                 description_long: formDataRaw.get('description_long'),
+                pricing_notes: formDataRaw.get('pricing_notes'),
                 category: formDataRaw.get('category'),
                 price_sats: parseInt(formDataRaw.get('price_sats')),
                 framework: formDataRaw.get('framework').toLowerCase(),

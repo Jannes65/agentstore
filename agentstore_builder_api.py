@@ -31,6 +31,7 @@ class AgentSubmission(BaseModel):
     name: str
     description_short: str
     description_long: str
+    pricing_notes: Optional[str] = None
     category: str
     price_sats: int
     endpoint_url: str
@@ -100,6 +101,7 @@ async def submit_agent(submission: AgentSubmission, db: Session = Depends(get_db
         "name": submission.name,
         "description_short": submission.description_short,
         "description_long": submission.description_long,
+        "pricing_notes": submission.pricing_notes,
         "category": submission.category,
         "price_sats": submission.price_sats,
         "endpoint_url": submission.endpoint_url,

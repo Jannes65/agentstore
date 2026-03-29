@@ -240,7 +240,12 @@ async def startup_event():
     with engine.connect() as conn:
         try:
             conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS reviewed BOOLEAN DEFAULT FALSE"))
+            conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS pricing_notes VARCHAR"))
             conn.execute(text("CREATE TABLE IF NOT EXISTS behaviour_logs (id SERIAL PRIMARY KEY, user_id VARCHAR, agent_id VARCHAR, agent_name VARCHAR, task VARCHAR, result_summary VARCHAR, cost_sats INTEGER DEFAULT 0, status VARCHAR DEFAULT 'success', created_at TIMESTAMP DEFAULT NOW())"))
+            
+            # One-time update for AI Detector pricing notes
+            conn.execute(text("UPDATE agents SET pricing_notes = 'Includes 5 free detection credits. Additional credits available inside the app.' WHERE name = 'AI Detector' AND pricing_notes IS NULL"))
+            
             conn.commit()
         except Exception:
             pass
@@ -257,6 +262,7 @@ async def update_agent(agent_id: str, request: Request):
         if "price_sats" in body: agent.price_sats = int(body["price_sats"])
         if "description_short" in body: agent.description_short = body["description_short"]
         if "description_long" in body: agent.description_long = body["description_long"]
+        if "pricing_notes" in body: agent.pricing_notes = body["pricing_notes"]
         if "category" in body: agent.category = body["category"]
         if "endpoint_url" in body: agent.endpoint_url = body["endpoint_url"]
         db.commit()
@@ -293,6 +299,7 @@ async def get_agents(
             "community_rating": agent.community_rating,
             "task_completion_rate": agent.task_completion_rate,
             "nostr_pubkey": agent.nostr_pubkey,
+            "pricing_notes": agent.pricing_notes,
             "created_at": str(agent.created_at)
         }
         safe_results.append(a_dict)
@@ -323,6 +330,7 @@ async def get_top_agents(db: Session = Depends(get_db)):
             "community_rating": agent.community_rating,
             "task_completion_rate": agent.task_completion_rate,
             "nostr_pubkey": agent.nostr_pubkey,
+            "pricing_notes": agent.pricing_notes,
             "created_at": str(agent.created_at)
         }
         safe_results.append(a_dict)
@@ -352,6 +360,7 @@ async def get_agent(agent_id: str, db: Session = Depends(get_db)):
         "community_rating": agent.community_rating,
         "task_completion_rate": agent.task_completion_rate,
         "nostr_pubkey": agent.nostr_pubkey,
+        "pricing_notes": agent.pricing_notes,
         "created_at": str(agent.created_at)
     }
 

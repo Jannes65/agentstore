@@ -119,6 +119,7 @@ class AgentSchema(BaseModel):
     version: str                = Field(..., description="Semantic version e.g. 1.0.0")
     description_short: str      = Field(..., min_length=10, max_length=120)
     description_long: str       = Field(..., min_length=50)
+    pricing_notes: Optional[str] = Field(None, max_length=500)
     category: Category
     tags: Optional[List[str]]   = Field(default_factory=list)
     author_name: str            = Field(..., min_length=1)
