@@ -78,6 +78,26 @@ document.addEventListener('DOMContentLoaded', function() {
             flex-direction: column;
             gap: 12px;
         }
+        #az-quick-replies {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 8px 12px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        #az-quick-replies button {
+            background: rgba(249,115,22,0.15);
+            color: #f97316;
+            border: 1px solid rgba(249,115,22,0.3);
+            border-radius: 16px;
+            padding: 5px 12px;
+            font-size: 11px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        #az-quick-replies button:hover {
+            background: rgba(249,115,22,0.3);
+        }
         .az-msg {
             max-width: 85%;
             padding: 8px 12px;
@@ -193,6 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <span id="az-close">&times;</span>
             </div>
             <div id="az-transcript"></div>
+            <div id="az-quick-replies"></div>
             <div id="az-input-area">
                 <input type="text" id="az-input" placeholder="Type a message..." autocomplete="off">
                 <button id="az-send">Send</button>
@@ -391,29 +412,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showQuickReplies(replies) {
-        const container = document.createElement('div');
-        container.className = 'az-quick-replies';
-        replies.forEach(reply => {
-            const btn = document.createElement('div');
-            btn.className = 'az-quick-reply';
-            btn.textContent = reply.text;
+        const container = document.getElementById('az-quick-replies');
+        if (!container) return;
+        container.innerHTML = '';
+        replies.forEach(label => {
+            const btn = document.createElement('button');
+            btn.textContent = label;
             btn.onclick = () => {
-                container.remove();
-                if (reply.action) {
-                    reply.action();
-                } else {
-                    input.value = reply.text;
-                    handleSend();
-                }
+                container.innerHTML = ''; // clear after click
+                input.value = label;
+                handleSend();
             };
             container.appendChild(btn);
         });
-        transcript.appendChild(container);
-        transcript.scrollTop = transcript.scrollHeight;
     }
 
 
     async function handleSend() {
+        const qrContainer = document.getElementById('az-quick-replies');
+        if (qrContainer) qrContainer.innerHTML = '';
+        
         const text = input.value.trim();
         if (!text) return;
 
@@ -520,19 +538,25 @@ Be concise, friendly, and Bitcoin-native in tone.`;
                 addMessage('agent', greeting);
                 messages.push({ role: 'assistant', content: greeting });
                 showQuickReplies([
-                    { text: "🔒 Start Code Review", action: () => { 
-                        reviewStep = 0;
-                        reviewData = {};
-                        cachedAgents = [];
-                        handleCodeReview('start'); 
-                    } },
-                    { text: "💡 Tips for my agents" },
-                    { text: "💰 Withdrawal help" }
+                    '🤖 Find me an agent',
+                    '📝 List my agent',
+                    '🔒 Code review (500 sats)',
+                    '💡 Agent combinations',
+                    '💰 Pricing advice',
+                    '⚡ How Lightning works'
                 ]);
                 return;
             }
             addMessage('agent', greeting);
             messages.push({ role: 'assistant', content: greeting });
+            showQuickReplies([
+                '🤖 Find me an agent',
+                '📝 List my agent',
+                '🔒 Code review (500 sats)',
+                '💡 Agent combinations',
+                '💰 Pricing advice',
+                '⚡ How Lightning works'
+            ]);
         }
     });
 
