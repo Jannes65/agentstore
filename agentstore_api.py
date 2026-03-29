@@ -233,7 +233,7 @@ class DepositRequest(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database and pre-populate with dummy agents if empty."""
+    """Initialize database and ensure migrations."""
     init_db()
     
     # Migration: add reviewed column if it doesn't exist
@@ -241,19 +241,9 @@ async def startup_event():
         try:
             conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS reviewed BOOLEAN DEFAULT FALSE"))
             conn.execute(text("CREATE TABLE IF NOT EXISTS behaviour_logs (id SERIAL PRIMARY KEY, user_id VARCHAR, agent_id VARCHAR, agent_name VARCHAR, task VARCHAR, result_summary VARCHAR, cost_sats INTEGER DEFAULT 0, status VARCHAR DEFAULT 'success', created_at TIMESTAMP DEFAULT NOW())"))
-            
-            # Run once to clean test data, then remove this block
-            conn.execute(text("DELETE FROM agents WHERE id = 'test_agent_001' AND builder_id = 'test123'"))
-            conn.execute(text("DELETE FROM builders WHERE id = 'test123'"))
-            conn.execute(text("DELETE FROM user_balances WHERE user_id IN ('test_user_001', 'jannes_001')"))
-            conn.execute(text("DELETE FROM behaviour_logs WHERE user_id = 'jannes_001'"))
-            
             conn.commit()
         except Exception:
             pass
-
-    db = next(get_db())
-    existing_agents = get_all_agents(db)
 
 @app.put("/agents/{agent_id}")
 async def update_agent(agent_id: str, request: Request):
