@@ -355,18 +355,6 @@ async def get_agent(agent_id: str, db: Session = Depends(get_db)):
         "created_at": str(agent.created_at)
     }
 
-@app.get("/admin/get-nostr-keys/{agent_id}")
-async def get_nostr_keys(agent_id: str, db: Session = Depends(get_db)):
-    """TEMPORARY: Fetch agent keys to test Nostr publish."""
-    from agentstore_database import Agent
-    agent = db.query(Agent).filter(Agent.id == agent_id).first()
-    if not agent:
-        raise HTTPException(status_code=404)
-    return {
-        "id": agent.id,
-        "nostr_pubkey": agent.nostr_pubkey,
-        "nostr_privkey": agent.nostr_privkey
-    }
 @app.post("/agents/{agent_id}/publish-nostr")
 async def publish_agent_nostr(agent_id: str, db: Session = Depends(get_db)):
     """Manually publish an existing agent to Nostr relays."""
