@@ -253,6 +253,8 @@ async def force_cleanup():
     try:
         # 1. Remove test_agent_001 (and its dependencies)
         db.execute(text("DELETE FROM behaviour_logs WHERE agent_id = 'test_agent_001'"))
+        db.execute(text("DELETE FROM execution_logs WHERE agent_id = 'test_agent_001'"))
+        db.execute(text("DELETE FROM agent_balances WHERE agent_id = 'test_agent_001'"))
         db.execute(text("DELETE FROM agents WHERE id = 'test_agent_001'"))
         
         # 2. Backfill Nostr keys
