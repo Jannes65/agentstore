@@ -236,18 +236,6 @@ async def startup_event():
     """Initialize database and ensure migrations."""
     init_db()
     
-    # Run once to clean test data, then remove this block
-    with engine.connect() as conn:
-        try:
-            conn.execute(text("DELETE FROM agents WHERE id = 'test_l402_agent'"))
-            # Confirm no other test data remains in user_balances or agent_balances
-            # jannes_001 should NOT be deleted, only test data added during L402 testing
-            # We already have jannes_001 in user_balances from previous tests, 
-            # the issue said do NOT delete jannes_001 if it existed before.
-            conn.commit()
-        except Exception:
-            pass
-
     # Migration: add reviewed column if it doesn't exist
     with engine.connect() as conn:
         try:
