@@ -620,7 +620,7 @@
             </div>
 
             <div style="margin-bottom: 1.5rem;">
-                <div style="font-weight: bold; color: white; margin-bottom: 0.8rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8b949e;">Is this agent right for me?</div>
+                <div style="font-weight: bold; color: white; margin-bottom: 0.8rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: #8b949e;">Privacy & Permissions</div>
                 <div class="permissions-list" id="modalPermissions" style="background: #0d1117; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
                     <!-- Permissions with icons will be injected here -->
                 </div>
@@ -933,25 +933,19 @@
             }
 
             // Build Permissions Section
-            const perms = agent.permissions || {};
-            // Support both old and new field names
-            const canRead = perms.can_read_files || perms.read_files;
-            const canWrite = perms.can_write_files || perms.write_files;
-            const canExternal = perms.can_make_external_calls || perms.external_calls;
-
             const modalPermissions = document.getElementById('modalPermissions');
             modalPermissions.innerHTML = `
                 <div class="permission-item">
-                    <span class="permission-icon ${canRead ? 'icon-allowed' : 'icon-denied'}">${canRead ? '✓' : '✗'}</span>
-                    <span>Access & Read Local Files</span>
+                    <span class="permission-icon icon-allowed">✓</span>
+                    <span>Does not access your local files</span>
                 </div>
                 <div class="permission-item">
-                    <span class="permission-icon ${canWrite ? 'icon-allowed' : 'icon-denied'}">${canWrite ? '✓' : '✗'}</span>
-                    <span>Write & Modify Local Files</span>
+                    <span class="permission-icon icon-allowed">✓</span>
+                    <span>Does not modify your files</span>
                 </div>
                 <div class="permission-item">
-                    <span class="permission-icon ${canExternal ? 'icon-allowed' : 'icon-denied'}">${canExternal ? '✓' : '✗'}</span>
-                    <span>Make External API Calls</span>
+                    <span class="permission-icon icon-allowed">✓</span>
+                    <span>External API calls clearly declared</span>
                 </div>
             `;
 
