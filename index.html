@@ -670,7 +670,7 @@
                     <button id="manualCheckBtn" class="btn btn-outline" style="width: 100%; margin-top: 1rem; display: none;">I've paid - Try Again</button>
                 </div>
 
-                <div id="nostr-identity-section" style="display: none; background: rgba(139, 92, 246, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3); margin-bottom: 1.5rem;">
+                <div id="nostr-identity-section" title="Agent identity on Nostr network" style="display: none; background: rgba(139, 92, 246, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3); margin-bottom: 1.5rem;">
                     <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #f7931a; font-weight: bold; margin-bottom: 0.8rem;">⚡ Sovereign Identity</div>
                     <div style="display: flex; align-items: center; justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -679,7 +679,6 @@
                             <span id="nostr-pubkey-display" style="font-family: monospace; font-size: 0.8rem; color: #8b949e; margin-left: 0.5rem;"></span>
                             <button id="nostr-copy-btn" title="Copy npub" style="background: none; border: none; color: #8b949e; cursor: pointer; padding: 0 0.3rem; font-size: 1rem;">⧉</button>
                         </div>
-                        <a id="nostr-pubkey-link" href="#" target="_blank" style="color: #8b5cf6; text-decoration: none; font-size: 0.85rem;">Verify Identity →</a>
                     </div>
                 </div>
 
@@ -912,7 +911,6 @@
                 const npub = agent.nostr_pubkey;
                 const short = npub.slice(0, 12) + '...' + npub.slice(-6);
                 document.getElementById('nostr-pubkey-display').textContent = short;
-                document.getElementById('nostr-pubkey-link').href = `https://nostr.guru/p/${npub}`;
                 document.getElementById('nostr-copy-btn').onclick = () => {
                     navigator.clipboard.writeText(npub);
                     document.getElementById('nostr-copy-btn').textContent = '✓';
