@@ -679,7 +679,7 @@
                             <span id="nostr-pubkey-display" style="font-family: monospace; font-size: 0.8rem; color: #8b949e; margin-left: 0.5rem;"></span>
                             <button id="nostr-copy-btn" title="Copy npub" style="background: none; border: none; color: #8b949e; cursor: pointer; padding: 0 0.3rem; font-size: 1rem;">⧉</button>
                         </div>
-                        <a id="nostr-pubkey-link" href="#" target="_blank" style="color: #8b5cf6; text-decoration: none; font-size: 0.85rem;">View on Nostr →</a>
+                        <a id="nostr-pubkey-link" href="#" target="_blank" style="color: #8b5cf6; text-decoration: none; font-size: 0.85rem;">Verify Identity →</a>
                     </div>
                 </div>
 
@@ -912,7 +912,7 @@
                 const npub = agent.nostr_pubkey;
                 const short = npub.slice(0, 12) + '...' + npub.slice(-6);
                 document.getElementById('nostr-pubkey-display').textContent = short;
-                document.getElementById('nostr-pubkey-link').href = `https://njump.me/${npub}`;
+                document.getElementById('nostr-pubkey-link').href = `https://nostr.guru/p/${npub}`;
                 document.getElementById('nostr-copy-btn').onclick = () => {
                     navigator.clipboard.writeText(npub);
                     document.getElementById('nostr-copy-btn').textContent = '✓';
