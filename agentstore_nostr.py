@@ -52,7 +52,7 @@ def publish_agent_to_nostr(agent: dict, nostr_privkey: str) -> bool:
             kind=31337,
             content=content,
             tags=tags,
-            public_key=private_key.public_key.hex()
+            pubkey=private_key.public_key.hex()
         )
         event.sign(private_key.hex())
 
@@ -60,8 +60,6 @@ def publish_agent_to_nostr(agent: dict, nostr_privkey: str) -> bool:
         for relay in NOSTR_RELAYS:
             relay_manager.add_relay(relay)
 
-        relay_manager.open_connections()
-        time.sleep(1)  # allow connections to establish
         relay_manager.publish_event(event)
         time.sleep(2)  # allow publish to complete
         relay_manager.close_connections()

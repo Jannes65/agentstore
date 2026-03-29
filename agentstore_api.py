@@ -327,15 +327,6 @@ async def get_top_agents(db: Session = Depends(get_db)):
         safe_results.append(a_dict)
     return safe_results
 
-@app.get("/admin/get-nostr-keys/{agent_id}")
-async def get_nostr_keys(agent_id: str, db: Session = Depends(get_db)):
-    """TEMPORARY: Get Nostr keys for an agent for testing."""
-    from agentstore_database import Agent
-    agent = db.query(Agent).filter(Agent.id == agent_id).first()
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
-    return {"id": agent.id, "pub": agent.nostr_pubkey, "priv": agent.nostr_privkey}
-
 @app.get("/agents/{agent_id}")
 async def get_agent(agent_id: str, db: Session = Depends(get_db)):
     """Returns a single listing or 404."""
