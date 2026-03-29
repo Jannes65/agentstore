@@ -245,7 +245,8 @@ async def startup_event():
         except Exception:
             pass
 
-    # One-time cleanup and backfill
+@app.post("/admin/force-cleanup")
+async def force_cleanup():
     from agentstore_database import SessionLocal, Agent
     from agentstore_nostr import generate_agent_keypair
     db = SessionLocal()
@@ -253,19 +254,20 @@ async def startup_event():
         # 1. Remove test_agent_001
         db.execute(text("DELETE FROM agents WHERE id = 'test_agent_001'"))
         
-        # 2. Backfill Nostr keys for agents that don't have them
+        # 2. Backfill Nostr keys
         agents_to_backfill = db.query(Agent).filter(Agent.nostr_pubkey == None).all()
-        if agents_to_backfill:
-            logging.warning(f"Backfilling Nostr keys for {len(agents_to_backfill)} agents")
-            for agent in agents_to_backfill:
-                keys = generate_agent_keypair()
-                agent.nostr_pubkey = keys["nostr_pubkey"]
-                agent.nostr_privkey = keys["nostr_privkey"]
+        results = []
+        for agent in agents_to_backfill:
+            keys = generate_agent_keypair()
+            agent.nostr_pubkey = keys["nostr_pubkey"]
+            agent.nostr_privkey = keys["nostr_privkey"]
+            results.append(agent.id)
         
         db.commit()
+        return {"status": "success", "removed": "test_agent_001", "backfilled": results}
     except Exception as e:
-        logging.error(f"Error during startup cleanup/backfill: {e}")
         db.rollback()
+        return {"status": "error", "detail": str(e)}
     finally:
         db.close()
 
