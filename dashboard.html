@@ -6,6 +6,7 @@
     <title>Builder Dashboard - AgentStore</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nostr-tools@2.7.2/lib/nostr.bundle.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
@@ -34,15 +35,32 @@
     <!-- Login Section -->
     <div id="loginSection" class="max-w-md mx-auto mt-20 p-8 card rounded-xl shadow-2xl">
         <h2 class="text-2xl font-bold mb-6 text-center">Builder Login</h2>
-        <p class="text-slate-400 mb-6 text-sm text-center">Enter your Builder ID to access your dashboard.</p>
-        <div class="space-y-4">
+        
+        <div id="nostrLoginArea" class="space-y-4">
             <div>
-                <label class="block text-sm font-medium text-slate-400 mb-1">Builder ID</label>
+                <label class="block text-sm font-medium text-slate-400 mb-1">Your Nostr Private Key (nsec)</label>
+                <input type="password" id="nsecInput" placeholder="nsec1..." 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-orange-500">
+                <p class="text-[10px] text-slate-500 mt-1 italic">Your key never leaves your device</p>
+            </div>
+            <button id="nostrLoginBtn" class="w-full bg-btc-orange text-white font-bold py-2 rounded-lg transition hover:scale-[1.02]">
+                Login with Nostr
+            </button>
+        </div>
+
+        <div class="relative my-8">
+            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-700"></div></div>
+            <div class="relative flex justify-center text-xs uppercase"><span class="bg-[#1e293b] px-2 text-slate-500">or</span></div>
+        </div>
+
+        <div id="legacyLoginArea" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-1">Builder ID (legacy)</label>
                 <input type="text" id="builderIdInput" placeholder="e.g. alice_01" 
                     class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-orange-500">
             </div>
-            <button id="loginBtn" class="w-full bg-btc-orange text-white font-bold py-2 rounded-lg transition">
-                Access Dashboard
+            <button id="loginBtn" class="w-full border border-slate-700 text-slate-300 font-bold py-2 rounded-lg transition hover:bg-slate-800">
+                Login with Builder ID
             </button>
         </div>
     </div>
@@ -237,6 +255,8 @@
         const logoutBtn = document.getElementById('logoutBtn');
         const builderIdInput = document.getElementById('builderIdInput');
         const loginBtn = document.getElementById('loginBtn');
+        const nsecInput = document.getElementById('nsecInput');
+        const nostrLoginBtn = document.getElementById('nostrLoginBtn');
 
         const withdrawModal = document.getElementById('withdrawModal');
         const modalTotalEarnings = document.getElementById('modalTotalEarnings');
@@ -260,6 +280,49 @@
                 showDashboard();
             }
         };
+
+        nostrLoginBtn.onclick = () => {
+            const nsec = nsecInput.value.trim();
+            if (nsec) {
+                loginWithNostr(nsec);
+            }
+        };
+
+        async function loginWithNostr(nsec) {
+            try {
+                // Decode nsec to get private key hex
+                const { type, data: privkeyHex } = window.NostrTools.nip19.decode(nsec);
+                if (type !== 'nsec') throw new Error('Invalid nsec');
+                
+                // Derive public key
+                const pubkeyHex = window.NostrTools.getPublicKey(privkeyHex);
+                const npub = window.NostrTools.nip19.npubEncode(pubkeyHex);
+                
+                // Clear nsec input field immediately
+                nsecInput.value = '';
+                
+                // Look up builder by npub
+                const res = await fetch(`${API_BASE}/builders/by-nostr/${npub}`);
+                
+                if (res.ok) {
+                    const builder = await res.json();
+                    currentBuilderId = builder.id;
+                    sessionStorage.setItem('builder_id', builder.id);
+                    sessionStorage.setItem('user_id', builder.id);
+                    sessionStorage.setItem('nostr_npub', npub);
+                    localStorage.setItem('builderId', builder.id);
+                    showDashboard();
+                } else {
+                    // No builder found — offer registration
+                    if (confirm("No builder profile found for this Nostr identity. Would you like to register?")) {
+                        window.location.href = `builder.html?npub=${npub}`;
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Invalid nsec key. Please check and try again.');
+            }
+        }
 
         logoutBtn.onclick = () => {
             sessionStorage.removeItem('builder_id');

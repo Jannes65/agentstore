@@ -25,6 +25,7 @@ class Builder(Base):
     name = Column(String)
     email = Column(String, unique=True, index=True)
     bitcoin_address = Column(String)
+    nostr_pubkey = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     agents = relationship("Agent", back_populates="builder")
 
@@ -105,6 +106,7 @@ def init_db():
     # Migrations
     with engine.connect() as conn:
         try:
+            conn.execute(text("ALTER TABLE builders ADD COLUMN IF NOT EXISTS nostr_pubkey VARCHAR"))
             conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS nostr_pubkey VARCHAR"))
             conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS nostr_privkey VARCHAR"))
             conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS pricing_notes VARCHAR"))

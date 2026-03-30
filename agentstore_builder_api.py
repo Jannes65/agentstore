@@ -24,6 +24,7 @@ class BuilderRegister(BaseModel):
     email: str
     bitcoin_address: str
     builder_id: Optional[str] = None
+    nostr_pubkey: Optional[str] = None
 
 class AgentSubmission(BaseModel):
     agent_id: Optional[str] = None
@@ -37,6 +38,21 @@ class AgentSubmission(BaseModel):
     endpoint_url: str
     permissions: dict = Field(default_factory=dict)
     framework: str
+
+@router.get("/builders/by-nostr/{npub}")
+async def get_builder_by_nostr(npub: str, db: Session = Depends(get_db)):
+    """Looks up a builder by their Nostr public key."""
+    from agentstore_database import Builder
+    builder = db.query(Builder).filter(Builder.nostr_pubkey == npub).first()
+    if not builder:
+        raise HTTPException(status_code=404, detail="Builder not found with this Nostr pubkey")
+    return {
+        "id": builder.id,
+        "name": builder.name,
+        "email": builder.email,
+        "bitcoin_address": builder.bitcoin_address,
+        "nostr_pubkey": builder.nostr_pubkey
+    }
 
 @router.post("/builders/register")
 async def register_builder(builder: BuilderRegister, db: Session = Depends(get_db)):
