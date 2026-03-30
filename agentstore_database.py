@@ -111,7 +111,11 @@ def init_db():
             conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS nostr_privkey VARCHAR"))
             conn.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS pricing_notes VARCHAR"))
             conn.commit()
-        except Exception:
+            print("Database migrations applied successfully.")
+        except Exception as e:
+            print(f"Error applying migrations: {e}")
+            import logging
+            logging.error(f"Error applying migrations: {e}")
             pass
 
 # --- CRUD Functions ---
