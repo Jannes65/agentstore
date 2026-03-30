@@ -250,20 +250,6 @@ async def startup_event():
         except Exception:
             pass
 
-@app.get("/admin/fix-jannes")
-def fix_jannes(db: Session = Depends(get_db)):
-    from sqlalchemy import text
-    try:
-        db.execute(text("DELETE FROM builders WHERE email = 'jannesdp@gmail.com' AND id != 'jannes65'"))
-        db.execute(text("UPDATE builders SET email = 'jannesdp@gmail.com' WHERE id = 'jannes65'"))
-        db.commit()
-        return {"status": "done"}
-    except Exception as e:
-        db.rollback()
-        import logging
-        logging.error(f"Error in fix_jannes: {e}")
-        return {"status": "error", "message": str(e)}
-
 @app.put("/agents/{agent_id}")
 async def update_agent(agent_id: str, request: Request):
     body = await request.json()
