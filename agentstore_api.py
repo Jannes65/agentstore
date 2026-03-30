@@ -250,19 +250,6 @@ async def startup_event():
         except Exception:
             pass
 
-@app.get("/admin/fix-jannes")
-def fix_jannes(db: Session = Depends(get_db)):
-    from sqlalchemy import text
-    try:
-        db.execute(text("UPDATE builders SET nostr_pubkey = 'npub1caa4zru9mmjkrv4jp6fyah350ltg55y3sa08kkk9dje34e7jvwvs575lse' WHERE id = 'jannes65'"))
-        db.commit()
-        return {"status": "done"}
-    except Exception as e:
-        db.rollback()
-        import logging
-        logging.error(f"Error in fix_jannes: {e}")
-        return {"status": "error", "message": str(e)}
-
 @app.put("/agents/{agent_id}")
 async def update_agent(agent_id: str, request: Request):
     body = await request.json()
