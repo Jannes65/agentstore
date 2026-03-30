@@ -253,10 +253,24 @@ async def startup_event():
 @app.get("/admin/fix-jannes")
 def fix_jannes(db: Session = Depends(get_db)):
     from sqlalchemy import text
+    from agentstore_database import Builder
     try:
-        db.execute(text("UPDATE builders SET nostr_pubkey = 'npub1ecxjlz0rrvn386w6h57e92stp6whgt0mhshg0nn90qt55g8ypxdqc7a8js', name = 'Jannes du Plooy', email = 'jannesdp@gmail.com' WHERE id = 'jannes65'"))
+        builder = db.query(Builder).filter(Builder.id == 'jannes65').first()
+        if builder:
+            builder.nostr_pubkey = 'npub1ecxjlz0rrvn386w6h57e92stp6whgt0mhshg0nn90qt55g8ypxdqc7a8js'
+            builder.name = 'Jannes du Plooy'
+            builder.email = 'jannesdp@gmail.com'
+        else:
+            new_builder = Builder(
+                id='jannes65',
+                name='Jannes du Plooy',
+                email='jannesdp@gmail.com',
+                bitcoin_address='jannes@getalby.com',
+                nostr_pubkey='npub1ecxjlz0rrvn386w6h57e92stp6whgt0mhshg0nn90qt55g8ypxdqc7a8js'
+            )
+            db.add(new_builder)
         db.commit()
-        return {"status": "done"}
+        return {"status": "done", "message": "Updated jannes65 successfully"}
     except Exception as e:
         db.rollback()
         logging.error(f"Error in fix_jannes: {e}")
