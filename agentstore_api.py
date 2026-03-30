@@ -236,15 +236,6 @@ async def startup_event():
     """Initialize database and ensure migrations."""
     init_db()
     
-    # Force DB update for jannes65 on Railway
-    from sqlalchemy import text
-    try:
-        with engine.connect() as conn:
-            conn.execute(text("UPDATE builders SET nostr_pubkey = 'npub1ecxjlz0rrvn386w6h57e92stp6whgt0mhshg0nn90qt55g8ypxdqc7a8js', name = 'Jannes du Plooy', email = 'jannesdp@gmail.com' WHERE id = 'jannes65'"))
-            conn.commit()
-    except Exception as e:
-        logging.error(f"Failed to force update jannes65: {e}")
-
     # Migration: ensure schema
     with engine.connect() as conn:
         try:
@@ -258,6 +249,13 @@ async def startup_event():
             conn.commit()
         except Exception:
             pass
+
+@app.get("/admin/fix-jannes")
+def fix_jannes(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    db.execute(text("UPDATE builders SET nostr_pubkey = 'npub1ecxjlz0rrvn386w6h57e92stp6whgt0mhshg0nn90qt55g8ypxdqc7a8js', name = 'Jannes du Plooy', email = 'jannesdp@gmail.com' WHERE id = 'jannes65'"))
+    db.commit()
+    return {"status": "done"}
 
 @app.put("/agents/{agent_id}")
 async def update_agent(agent_id: str, request: Request):
