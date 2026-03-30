@@ -254,7 +254,7 @@ async def startup_event():
 def fix_jannes(db: Session = Depends(get_db)):
     from sqlalchemy import text
     try:
-        db.execute(text("UPDATE builders SET nostr_pubkey = 'npub1caa4zru9mmjkrv4jp6fyah350ltg55y3sa08kkk9dje34e7jvwvs575lse', name = 'Jannes du Plooy', email = 'jannesdp@gmail.com' WHERE id = 'jannes65'"))
+        db.execute(text("UPDATE builders SET nostr_pubkey = 'npub1caa4zru9mmjkrv4jp6fyah350ltg55y3sa08kkk9dje34e7jvwvs575lse' WHERE id = 'jannes65'"))
         db.commit()
         return {"status": "done"}
     except Exception as e:
