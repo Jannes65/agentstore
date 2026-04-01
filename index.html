@@ -1019,6 +1019,8 @@
                 
                 // Persist invoice across refresh
                 localStorage.setItem('pendingInvoiceRef', activeEngineInvoiceRef);
+                localStorage.setItem('pendingUserId', userId);
+                localStorage.setItem('pendingAmountSats', amountSats);
                 localStorage.setItem('pendingInvoiceAmount', amountSats);
                 localStorage.setItem('pendingInvoiceUser', userId);
                 localStorage.setItem('pendingAgentId', agentId);
@@ -1134,7 +1136,7 @@
             await generateInvoice(selectedAgentId, userId, selectedAgentPrice);
         };
 
-        async function pollPaymentStatus(engineInvoiceRef, userId, amountSats, maxAttempts = 10) {
+        async function pollPaymentStatus(engineInvoiceRef, userId, amountSats, maxAttempts = 30) {
             for (let i = 0; i < maxAttempts; i++) {
                 await new Promise(r => setTimeout(r, 3000));
                 try {
@@ -1146,6 +1148,22 @@
                 }
             }
             return false;
+        }
+
+        function runAgentAfterPayment() {
+            const userId = localStorage.getItem('pendingUserId') || userIdInput.value.trim();
+            const agentId = localStorage.getItem('pendingAgentId') || selectedAgentId;
+            
+            depositSection.style.display = 'none';
+            invoiceContainer.style.display = 'none';
+            manualCheckBtn.style.display = 'none';
+            document.getElementById('depositIntro').style.display = 'block';
+            generateInvoiceBtn.style.display = 'block';
+            generateInvoiceBtn.disabled = false;
+            generateInvoiceBtn.innerText = `Deposit ${selectedAgentPrice} SATS`;
+            runAgentBtn.innerText = 'Use Agent';
+            
+            runAgent(agentId, userId);
         }
 
         async function verifyPayment() {
@@ -1197,6 +1215,8 @@
 
                     // Payment successful! Balance credited.
                     localStorage.removeItem('pendingInvoiceRef');
+                    localStorage.removeItem('pendingUserId');
+                    localStorage.removeItem('pendingAmountSats');
                     localStorage.removeItem('pendingInvoiceAmount');
                     localStorage.removeItem('pendingInvoiceUser');
                     localStorage.removeItem('pendingAgentId');
@@ -1215,7 +1235,63 @@
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     await runAgent(selectedAgentId, userId);
                 } else {
-                    alert('Payment not yet detected. Please wait a moment and try again.');
+                    // On timeout — show recovery UI instead of just alert
+                    invoiceContainer.innerHTML = `
+                        <p style="color:#f97316;">⏱ Payment taking longer than expected.</p>
+                        <p style="color:#94a3b8; font-size:13px;">Already paid from your wallet?</p>
+                        <button id="check-payment-btn" style="
+                            background:#f97316; color:white; border:none; 
+                            padding:10px 20px; border-radius:8px; cursor:pointer; 
+                            font-size:14px; margin-top:8px; width:100%;">
+                            Check Payment Status
+                        </button>
+                    `;
+
+                    document.getElementById('check-payment-btn').onclick = async () => {
+                        const ref = localStorage.getItem('pendingInvoiceRef');
+                        const userIdRec = localStorage.getItem('pendingUserId');
+                        const amount = localStorage.getItem('pendingAmountSats');
+                        
+                        if (!ref) {
+                            invoiceContainer.innerHTML = '<p style="color:red;">No pending payment found.</p>';
+                            return;
+                        }
+                        
+                        const checkBtn = document.getElementById('check-payment-btn');
+                        checkBtn.textContent = 'Checking...';
+                        checkBtn.disabled = true;
+                        
+                        try {
+                            const res = await fetch(`${API_BASE}/payments/status/${ref}?user_id=${userIdRec}&amount_sats=${amount}`);
+                            const data = await res.json();
+                            
+                            if (data.status === 'paid') {
+                                // Clear pending invoice
+                                localStorage.removeItem('pendingInvoiceRef');
+                                localStorage.removeItem('pendingUserId');
+                                localStorage.removeItem('pendingAmountSats');
+                                localStorage.removeItem('pendingInvoiceAmount');
+                                localStorage.removeItem('pendingInvoiceUser');
+                                localStorage.removeItem('pendingAgentId');
+                                localStorage.removeItem('pendingInvoiceTime');
+                                
+                                // Show success and retry agent run
+                                invoiceContainer.innerHTML = '<p style="color:#22c55e;">✅ Payment confirmed! Running agent...</p>';
+                                // Trigger the agent run that was waiting
+                                setTimeout(() => runAgentAfterPayment(), 1000);
+                            } else {
+                                checkBtn.textContent = 'Check Payment Status';
+                                checkBtn.disabled = false;
+                                const msg = document.createElement('p');
+                                msg.style.cssText = "color:#94a3b8; font-size:12px; margin-top:8px;";
+                                msg.innerText = "Payment not confirmed yet. Wait a moment and try again.";
+                                invoiceContainer.appendChild(msg);
+                            }
+                        } catch(e) {
+                            checkBtn.textContent = 'Check Payment Status';
+                            checkBtn.disabled = false;
+                        }
+                    };
                 }
             } catch (err) {
                 console.error(`Error during payment verification for ${activeEngineInvoiceRef}:`, err);
