@@ -9,11 +9,6 @@ from pydantic import BaseModel
 import httpx
 import re
 
-def ensure_trailing_slash(url: str) -> str:
-    if not url.endswith('/'):
-        return url + '/'
-    return url
-
 async def call_agent_endpoint(endpoint_url: str, task: str, user_id: str, user_balance_sats: int = 0) -> dict:
     headers = {
         "Content-Type": "application/json",

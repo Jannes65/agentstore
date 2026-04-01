@@ -250,13 +250,6 @@ async def startup_event():
         except Exception:
             pass
 
-@app.get("/admin/fix-askjo")
-def fix_askjo(db: Session = Depends(get_db)):
-    db.execute(text("UPDATE agents SET builder_id = 'jannes65' WHERE name = 'AskJo'"))
-    db.commit()
-    result = db.execute(text("SELECT name, builder_id FROM agents")).fetchall()
-    return {"agents": [{"name": r[0], "builder_id": r[1]} for r in result]}
-
 @app.put("/agents/{agent_id}")
 async def update_agent(agent_id: str, request: Request):
     body = await request.json()
