@@ -288,13 +288,13 @@
         window.addEventListener('load', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const builderId = sessionStorage.getItem('builder_id') || urlParams.get('builder_id');
-            if (builderId) {
-                document.getElementById('builder_id').value = builderId;
-            } else {
-                // If no builder is logged in, redirect to the dashboard login first.
-                alert('Please log in to your builder account first.');
-                window.location.href = 'builder.html';
+            if (!builderId) {
+                // No session — redirect to dashboard to login first
+                alert('Please log in to your builder dashboard first.');
+                window.location.href = '/dashboard.html';
+                return;
             }
+            document.getElementById('builder_id').value = builderId;
         });
 
         // Real-time validation for required fields

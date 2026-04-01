@@ -15,7 +15,6 @@ def ensure_trailing_slash(url: str) -> str:
     return url
 
 async def call_agent_endpoint(endpoint_url: str, task: str, user_id: str, user_balance_sats: int = 0) -> dict:
-    endpoint_url = ensure_trailing_slash(endpoint_url)
     headers = {
         "Content-Type": "application/json",
         "User-Agent": "AgentStore/1.0"
@@ -55,7 +54,6 @@ async def call_agent_endpoint(endpoint_url: str, task: str, user_id: str, user_b
         return {"status": "error", "result": f"Agent error: {str(e)}"}
 
 async def call_agent_endpoint_with_auth(endpoint_url: str, task: str, user_id: str, headers: dict) -> dict:
-    endpoint_url = ensure_trailing_slash(endpoint_url)
     # Ensure mandatory headers are present
     headers["Content-Type"] = "application/json"
     headers["User-Agent"] = "AgentStore/1.0"
