@@ -194,8 +194,8 @@
         <h1>Submit Your Agent</h1>
         <form id="submitForm">
             <div class="form-group">
-                <label for="builder_id">Builder ID (Optional)</label>
-                <input type="text" id="builder_id" name="builder_id" class="form-control" placeholder="e.g. alice_01">
+                <label for="builder_id">Builder ID</label>
+                <input type="text" id="builder_id" name="builder_id" class="form-control" placeholder="Please log in first" readonly required>
             </div>
 
             <div class="form-group">
@@ -343,7 +343,7 @@
             });
 
             const formData = {
-                builder_id: sessionStorage.getItem('builder_id') || formDataRaw.get('builder_id'),
+                builder_id: sessionStorage.getItem('builder_id') || document.getElementById('builder_id').value,
                 name: formDataRaw.get('name'),
                 description_short: formDataRaw.get('description_short'),
                 description_long: formDataRaw.get('description_long'),
