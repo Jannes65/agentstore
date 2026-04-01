@@ -290,6 +290,10 @@
             const builderId = sessionStorage.getItem('builder_id') || urlParams.get('builder_id');
             if (builderId) {
                 document.getElementById('builder_id').value = builderId;
+            } else {
+                // If no builder is logged in, redirect to the dashboard login first.
+                alert('Please log in to your builder account first.');
+                window.location.href = 'builder.html';
             }
         });
 
@@ -339,6 +343,7 @@
             });
 
             const formData = {
+                builder_id: sessionStorage.getItem('builder_id') || formDataRaw.get('builder_id'),
                 name: formDataRaw.get('name'),
                 description_short: formDataRaw.get('description_short'),
                 description_long: formDataRaw.get('description_long'),

@@ -250,6 +250,19 @@ async def startup_event():
         except Exception:
             pass
 
+@app.get("/admin/fix-askjo")
+def fix_askjo(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    try:
+        db.execute(text("UPDATE agents SET builder_id = 'jannes65' WHERE name = 'AskJo'"))
+        db.commit()
+        return {"status": "done"}
+    except Exception as e:
+        db.rollback()
+        import logging
+        logging.error(f"Error in fix_askjo: {e}")
+        return {"status": "error", "message": str(e)}
+
 @app.put("/agents/{agent_id}")
 async def update_agent(agent_id: str, request: Request):
     body = await request.json()
