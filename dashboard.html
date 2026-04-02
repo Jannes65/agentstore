@@ -223,9 +223,11 @@
                     </button>
                 </div>
 
-                <div class="flex items-center justify-center space-x-2 text-orange-500 animate-pulse">
-                    <div class="w-2 h-2 bg-orange-500 rounded-full"></div>
-                    <p class="text-sm font-medium">Waiting for payment...</p>
+                <div id="fundStatusArea" class="space-y-4">
+                    <div class="flex items-center justify-center space-x-2 text-orange-500 animate-pulse">
+                        <div class="w-2 h-2 bg-orange-500 rounded-full"></div>
+                        <p class="text-sm font-medium">Waiting for payment...</p>
+                    </div>
                 </div>
             </div>
 
@@ -676,6 +678,7 @@
         const fundSuccessArea = document.getElementById('fundSuccessArea');
         const qrcodeContainer = document.getElementById('qrcode');
         const fundInvoiceText = document.getElementById('fundInvoiceText');
+        const fundStatusArea = document.getElementById('fundStatusArea');
 
         let qrcode = null;
         let fundPollInterval = null;
@@ -732,6 +735,11 @@
                 if (data.paymentRequest) {
                     fundInvoiceText.value = data.paymentRequest;
                     
+                    // Store recovery info
+                    localStorage.setItem('pendingInvoiceRef', data.engine_invoice_ref);
+                    localStorage.setItem('pendingUserId', agentId);
+                    localStorage.setItem('pendingAmountSats', amount);
+
                     // Generate QR
                     qrcodeContainer.innerHTML = "";
                     qrcode = new QRCode(qrcodeContainer, {
@@ -745,6 +753,12 @@
                     
                     fundInputArea.classList.add('hidden');
                     fundInvoiceArea.classList.remove('hidden');
+                    fundStatusArea.innerHTML = `
+                        <div class="flex items-center justify-center space-x-2 text-orange-500 animate-pulse">
+                            <div class="w-2 h-2 bg-orange-500 rounded-full"></div>
+                            <p class="text-sm font-medium">Waiting for payment...</p>
+                        </div>
+                    `;
                     
                     // Start polling
                     pollFundStatus(data.engine_invoice_ref, agentId, amount);
@@ -760,13 +774,65 @@
         function pollFundStatus(ref, agentId, amount) {
             if (fundPollInterval) clearInterval(fundPollInterval);
             let attempts = 0;
-            const maxAttempts = 60; // 3 minutes
+            const maxAttempts = 30; // 90 seconds (consistent with index.html)
 
             fundPollInterval = setInterval(async () => {
                 attempts++;
                 if (attempts > maxAttempts) {
                     clearInterval(fundPollInterval);
-                    alert('Payment polling timed out. If you already paid, it will be credited shortly.');
+                    
+                    // On timeout — show recovery UI
+                    fundStatusArea.innerHTML = `
+                        <p style="color:#f97316; font-size:14px; text-align:center;">⏱ Payment taking longer than expected.</p>
+                        <p style="color:#94a3b8; font-size:13px; text-align:center;">Already paid from your wallet?</p>
+                        <button id="check-fund-btn" style="
+                            background:#f97316; color:white; border:none; 
+                            padding:10px 20px; border-radius:8px; cursor:pointer; 
+                            font-size:14px; margin-top:8px; width:100%;">
+                            Check Payment Status
+                        </button>
+                    `;
+
+                    document.getElementById('check-fund-btn').onclick = async () => {
+                        const ref = localStorage.getItem('pendingInvoiceRef');
+                        const userId = localStorage.getItem('pendingUserId');
+                        const amount = localStorage.getItem('pendingAmountSats');
+                        
+                        if (!ref) {
+                            fundStatusArea.innerHTML += '<p style="color:red; font-size:12px; margin-top:4px;">No pending payment found.</p>';
+                            return;
+                        }
+                        
+                        const btn = document.getElementById('check-fund-btn');
+                        btn.textContent = 'Checking...';
+                        btn.disabled = true;
+                        
+                        try {
+                            const res = await fetch(`${API_BASE}/payments/status/${ref}?user_id=${userId}&amount_sats=${amount}`);
+                            const data = await res.json();
+                            
+                            if (data.status === 'paid') {
+                                clearInterval(fundPollInterval);
+                                // Clear pending
+                                localStorage.removeItem('pendingInvoiceRef');
+                                localStorage.removeItem('pendingUserId');
+                                localStorage.removeItem('pendingAmountSats');
+                                
+                                fundInvoiceArea.classList.add('hidden');
+                                fundSuccessArea.classList.remove('hidden');
+                                refreshData();
+                            } else {
+                                btn.textContent = 'Check Payment Status';
+                                btn.disabled = false;
+                                if (!fundStatusArea.innerHTML.includes('Payment not confirmed yet')) {
+                                    fundStatusArea.innerHTML += '<p style="color:#94a3b8; font-size:12px; margin-top:8px; text-align:center;">Payment not confirmed yet. Wait a moment and try again.</p>';
+                                }
+                            }
+                        } catch(e) {
+                            btn.textContent = 'Check Payment Status';
+                            btn.disabled = false;
+                        }
+                    };
                     return;
                 }
 
@@ -776,6 +842,12 @@
                     
                     if (data.status === 'paid') {
                         clearInterval(fundPollInterval);
+                        
+                        // Clear pending
+                        localStorage.removeItem('pendingInvoiceRef');
+                        localStorage.removeItem('pendingUserId');
+                        localStorage.removeItem('pendingAmountSats');
+                        
                         fundInvoiceArea.classList.add('hidden');
                         fundSuccessArea.classList.remove('hidden');
                         refreshData();
