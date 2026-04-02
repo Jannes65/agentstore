@@ -24,6 +24,25 @@ from agentstore_ledger import credit_balance, get_balance, deduct_balance
 app = FastAPI(title="AgentStore API")
 app.include_router(builder_router)
 
+@app.get("/admin/credit-ai-detector")
+def credit_ai_detector(db: Session = Depends(get_db)):
+    # 1. Run the update/insert
+    sql = """
+    INSERT INTO user_balances (user_id, balance_sats) 
+    VALUES ('e8265f98-9a9b-42b6-bb7e-e702dfde4b81', 550)
+    ON CONFLICT (user_id) DO UPDATE SET balance_sats = user_balances.balance_sats + 550;
+    """
+    db.execute(text(sql))
+    db.commit()
+    
+    # 2. Confirm the result
+    result = db.execute(text("SELECT user_id, balance_sats FROM user_balances WHERE user_id = 'e8265f98-9a9b-42b6-bb7e-e702dfde4b81'")).fetchone()
+    
+    if result:
+        return {"status": "success", "user_id": result[0], "balance_sats": result[1]}
+    else:
+        return {"status": "error", "message": "Record not found after update"}
+
 @app.post("/agents/{agent_id}/verify")
 async def verify_agent(agent_id: str, request: Request):
     body = await request.json()
