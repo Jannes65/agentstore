@@ -177,6 +177,71 @@
         </div>
     </div>
 
+    <!-- Fund Agent Modal -->
+    <div id="fundAgentModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center z-[110] p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-8 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">⚡ Fund Agent Wallet</h2>
+                <button onclick="closeFundModal()" class="text-slate-500 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="space-y-4 mb-6">
+                <div>
+                    <p class="text-xs text-slate-500 uppercase">Agent</p>
+                    <p id="fundAgentName" class="font-bold text-lg">-</p>
+                    <input type="hidden" id="fundAgentId">
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 uppercase">Current Balance</p>
+                    <p class="font-bold text-orange-500"><span id="fundAgentBalance">-</span> SATS</p>
+                </div>
+            </div>
+
+            <div id="fundInputArea">
+                <label class="block text-xs font-medium text-slate-500 uppercase mb-2 tracking-wider">Amount to deposit (sats)</label>
+                <input type="number" id="fundAmountInput" placeholder="1000" 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 mb-6 transition-all">
+                
+                <button id="generateFundInvoiceBtn" class="w-full bg-btc-orange text-white font-bold py-3 rounded-xl shadow-lg shadow-orange-500/20 transition hover:scale-[1.02] active:scale-[0.98]">
+                    Generate Lightning Invoice
+                </button>
+            </div>
+
+            <div id="fundInvoiceArea" class="hidden space-y-6">
+                <div class="flex justify-center bg-white p-4 rounded-xl">
+                    <div id="fundQRCode"></div>
+                </div>
+                
+                <div class="relative">
+                    <textarea id="fundInvoiceText" readonly rows="3" 
+                        class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-[10px] font-mono text-slate-300 focus:outline-none"></textarea>
+                    <button onclick="copyFundInvoice()" class="absolute bottom-2 right-2 bg-slate-700 hover:bg-slate-600 text-white text-[10px] px-2 py-1 rounded">
+                        Copy
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-center space-x-2 text-orange-500 animate-pulse">
+                    <div class="w-2 h-2 bg-orange-500 rounded-full"></div>
+                    <p class="text-sm font-medium">Waiting for payment...</p>
+                </div>
+            </div>
+
+            <div id="fundSuccessArea" class="hidden text-center py-8 space-y-4">
+                <div class="text-5xl">✅</div>
+                <h3 class="text-xl font-bold text-green-500">Agent wallet funded!</h3>
+                <button onclick="closeFundModal()" class="w-full bg-slate-800 text-white font-bold py-3 rounded-xl hover:bg-slate-700 transition">
+                    Done
+                </button>
+            </div>
+
+            <p class="text-[10px] text-slate-500 mt-6 italic text-center">
+                ⓘ These sats fund your agent's wallet so it can autonomously pay other agents for services.
+            </p>
+        </div>
+    </div>
+
     <!-- Edit Agent Modal -->
     <div id="editAgentModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center z-[100] p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
@@ -401,11 +466,18 @@
                                         <p class="text-xs text-slate-500 uppercase">Earned</p>
                                         <p class="font-bold btc-orange">${balance} SATS</p>
                                     </div>
+                                    <div class="text-right">
+                                        <p class="text-xs text-slate-500 uppercase">Wallet</p>
+                                        <p class="font-bold text-blue-400" id="wallet-bal-${agent.id}">... SATS</p>
+                                    </div>
                                     <div class="flex space-x-2">
-                                        <button onclick="openEditModal('${agent.id}', ${price}, '${descShort.replace(/'/g, "\\'").replace(/\n/g, "\\n")}', '${descLong.replace(/'/g, "\\'").replace(/\n/g, "\\n")}', '${category.replace(/'/g, "\\'")}', '${endpointUrl.replace(/'/g, "\\'")}', '${pricingNotes.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" class="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition">
+                                        <button onclick="openEditModal('${agent.id}', ${price}, '${descShort.replace(/'/g, "\\'").replace(/\n/g, "\\n")}', '${descLong.replace(/'/g, "\\'").replace(/\n/g, "\\n")}', '${category.replace(/'/g, "\\'")}', '${endpointUrl.replace(/'/g, "\\'")}', '${pricingNotes.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" class="p-2 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition" title="Edit Agent">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                         </button>
-                                        <button onclick="delistAgent('${agent.id}')" class="p-2 hover:bg-red-900/30 rounded text-slate-400 hover:text-red-500 transition">
+                                        <button onclick="fundAgent('${agent.id}', '${name.replace(/'/g, "\\'")}')" class="p-2 hover:bg-orange-900/30 rounded text-slate-400 hover:text-orange-500 transition" title="Fund Agent Wallet">
+                                            <span class="text-xl">💰</span>
+                                        </button>
+                                        <button onclick="delistAgent('${agent.id}')" class="p-2 hover:bg-red-900/30 rounded text-slate-400 hover:text-red-500 transition" title="Delist Agent">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                         </button>
                                     </div>
@@ -413,6 +485,16 @@
                             </div>
                         `;
                     }).join('');
+
+                    // Fetch and display wallet balances for each agent
+                    profileData.agents.forEach(async agent => {
+                        try {
+                            const res = await fetch(`${API_BASE}/payments/balance/${agent.id}`);
+                            const data = await res.json();
+                            const balEl = document.getElementById(`wallet-bal-${agent.id}`);
+                            if (balEl) balEl.textContent = `${data.balance_sats.toLocaleString()} SATS`;
+                        } catch (e) { console.error(`Failed to fetch balance for ${agent.id}`, e); }
+                    });
                     
                     const totalSats = earningsData.total_earnings_sats;
                     const totalSatsFormatted = totalSats.toLocaleString();
@@ -580,6 +662,120 @@
                 confirmWithdrawBtn.textContent = 'Send Payout';
             }
         };
+
+        // --- Fund Agent Wallet Logic ---
+        const fundAgentModal = document.getElementById('fundAgentModal');
+        const fundAgentName = document.getElementById('fundAgentName');
+        const fundAgentBalance = document.getElementById('fundAgentBalance');
+        const fundAgentIdInput = document.getElementById('fundAgentId');
+        const fundAmountInput = document.getElementById('fundAmountInput');
+        const generateFundInvoiceBtn = document.getElementById('generateFundInvoiceBtn');
+        const fundInputArea = document.getElementById('fundInputArea');
+        const fundInvoiceArea = document.getElementById('fundInvoiceArea');
+        const fundSuccessArea = document.getElementById('fundSuccessArea');
+        const fundQRCode = document.getElementById('fundQRCode');
+        const fundInvoiceText = document.getElementById('fundInvoiceText');
+
+        let fundQR = null;
+        let fundPollInterval = null;
+
+        async function fundAgent(agentId, agentName) {
+            fundAgentIdInput.value = agentId;
+            fundAgentName.textContent = agentName;
+            fundAgentBalance.textContent = '...';
+            
+            fundInputArea.classList.remove('hidden');
+            fundInvoiceArea.classList.add('hidden');
+            fundSuccessArea.classList.add('hidden');
+            fundAmountInput.value = '';
+            
+            fundAgentModal.classList.remove('hidden');
+            
+            try {
+                const res = await fetch(`${API_BASE}/payments/balance/${agentId}`);
+                const data = await res.json();
+                fundAgentBalance.textContent = data.balance_sats.toLocaleString();
+            } catch (e) { console.error(e); }
+        }
+
+        function closeFundModal() {
+            fundAgentModal.classList.add('hidden');
+            if (fundPollInterval) clearInterval(fundPollInterval);
+        }
+
+        generateFundInvoiceBtn.onclick = async () => {
+            const amount = parseInt(fundAmountInput.value);
+            const agentId = fundAgentIdInput.value;
+            
+            if (isNaN(amount) || amount <= 0) {
+                alert('Please enter a valid amount.');
+                return;
+            }
+
+            generateFundInvoiceBtn.disabled = true;
+            generateFundInvoiceBtn.textContent = 'Generating...';
+
+            try {
+                const res = await fetch(`${API_BASE}/payments/deposit?user_id=${agentId}&amount_sats=${amount}`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                
+                if (data.lightning_invoice) {
+                    fundInvoiceText.value = data.lightning_invoice;
+                    
+                    // Generate QR
+                    if (!fundQR) {
+                        fundQR = new QRCode(fundQRCode, { width: 200, height: 200 });
+                    }
+                    fundQR.makeCode(data.lightning_invoice);
+                    
+                    fundInputArea.classList.add('hidden');
+                    fundInvoiceArea.classList.remove('hidden');
+                    
+                    // Start polling
+                    pollFundStatus(data.engine_invoice_ref, agentId, amount);
+                }
+            } catch (e) {
+                alert('Failed to generate invoice: ' + e.message);
+            } finally {
+                generateFundInvoiceBtn.disabled = false;
+                generateFundInvoiceBtn.textContent = 'Generate Lightning Invoice';
+            }
+        };
+
+        function pollFundStatus(ref, agentId, amount) {
+            if (fundPollInterval) clearInterval(fundPollInterval);
+            let attempts = 0;
+            const maxAttempts = 60; // 3 minutes
+
+            fundPollInterval = setInterval(async () => {
+                attempts++;
+                if (attempts > maxAttempts) {
+                    clearInterval(fundPollInterval);
+                    alert('Payment polling timed out. If you already paid, it will be credited shortly.');
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`${API_BASE}/payments/status/${ref}?user_id=${agentId}&amount_sats=${amount}`);
+                    const data = await res.json();
+                    
+                    if (data.status === 'paid') {
+                        clearInterval(fundPollInterval);
+                        fundInvoiceArea.classList.add('hidden');
+                        fundSuccessArea.classList.remove('hidden');
+                        refreshData();
+                    }
+                } catch (e) { console.error('Poll error', e); }
+            }, 3000);
+        }
+
+        function copyFundInvoice() {
+            fundInvoiceText.select();
+            document.execCommand('copy');
+            alert('Invoice copied to clipboard!');
+        }
     </script>
     <script src="agentzero-widget.js"></script>
 </body>
