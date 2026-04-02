@@ -731,19 +731,21 @@
                     })
                 });
                 const data = await res.json();
+                const engineInvoiceRef = data.engineInvoiceRef;
+                const paymentRequest = data.paymentRequest;
                 
-                if (data.paymentRequest) {
-                    fundInvoiceText.value = data.paymentRequest;
+                if (paymentRequest) {
+                    fundInvoiceText.value = paymentRequest;
                     
                     // Store recovery info
-                    localStorage.setItem('pendingInvoiceRef', data.engine_invoice_ref);
+                    localStorage.setItem('pendingInvoiceRef', engineInvoiceRef);
                     localStorage.setItem('pendingUserId', agentId);
                     localStorage.setItem('pendingAmountSats', amount);
 
                     // Generate QR
                     qrcodeContainer.innerHTML = "";
                     qrcode = new QRCode(qrcodeContainer, {
-                        text: data.paymentRequest.toUpperCase(),
+                        text: paymentRequest.toUpperCase(),
                         width: 256,
                         height: 256,
                         colorDark: '#000000',
@@ -761,7 +763,7 @@
                     `;
                     
                     // Start polling
-                    pollFundStatus(data.engine_invoice_ref, agentId, amount);
+                    pollFundStatus(engineInvoiceRef, agentId, amount);
                 }
             } catch (e) {
                 alert('Failed to generate invoice: ' + e.message);
