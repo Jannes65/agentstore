@@ -551,12 +551,5 @@ async def get_user_history(user_id: str):
     finally:
         db.close()
 
-@app.get("/admin/delete-test-agent")
-def delete_test_agent(db: Session = Depends(get_db)):
-    db.execute(text("DELETE FROM agents WHERE name = 'Test'"))
-    db.commit()
-    result = db.execute(text("SELECT name FROM agents")).fetchall()
-    return {"message": "Test agent deleted (if it existed)", "remaining_agents": [r[0] for r in result]}
-
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
