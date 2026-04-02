@@ -202,7 +202,8 @@
             <div id="fundInputArea">
                 <label class="block text-xs font-medium text-slate-500 uppercase mb-2 tracking-wider">Amount to deposit (sats)</label>
                 <input type="number" id="fundAmountInput" placeholder="1000" 
-                    class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 mb-6 transition-all">
+                    class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 mb-2 transition-all">
+                <p class="text-[10px] text-slate-500 mb-6 italic">ⓘ Minimum suggested: 1000 sats. Agent works without a balance — funding enables autonomous agent-to-agent payments.</p>
                 
                 <button id="generateFundInvoiceBtn" class="w-full bg-btc-orange text-white font-bold py-3 rounded-xl shadow-lg shadow-orange-500/20 transition hover:scale-[1.02] active:scale-[0.98]">
                     Generate Lightning Invoice
@@ -716,19 +717,26 @@
             generateFundInvoiceBtn.textContent = 'Generating...';
 
             try {
-                const res = await fetch(`${API_BASE}/payments/deposit?user_id=${agentId}&amount_sats=${amount}`, {
-                    method: 'POST'
+                const res = await fetch(`${API_BASE}/payments/deposit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: agentId,
+                        amount_sats: amount
+                    })
                 });
                 const data = await res.json();
                 
-                if (data.lightning_invoice) {
-                    fundInvoiceText.value = data.lightning_invoice;
+                if (data.paymentRequest) {
+                    fundInvoiceText.value = data.paymentRequest;
                     
                     // Generate QR
                     if (!fundQR) {
                         fundQR = new QRCode(fundQRCode, { width: 200, height: 200 });
                     }
-                    fundQR.makeCode(data.lightning_invoice);
+                    fundQR.makeCode(data.paymentRequest);
                     
                     fundInputArea.classList.add('hidden');
                     fundInvoiceArea.classList.remove('hidden');
