@@ -1,4 +1,4 @@
-AgentStore Architecture Document v1.0
+AgentStore Architecture Document v1.5
 Last updated: March 2026
 ________________________________________
 VISION
@@ -103,11 +103,24 @@ Builder pastes Lightning invoice in dashboard
 → Agent balances deducted
 → Transaction logged
 ________________________________________
-AGENT TYPES
-Type	How Called	Best For
-API Agent	POST to endpoint_url with {task, user_id}	Purpose-built agents, simple AI tools
-Web App	Redirect user to endpoint_url	Full applications, chat UIs
-Embedded	iframe of endpoint_url	Apps that embed inside AgentStore
+PRICING MODELS
+Builders choose how to price access to their agent. AgentStore supports four models:
+Model	How it works	Best for
+Pay per run	User pays per single use via Lightning invoice	Simple agents, one-off tasks
+Credit packs	User buys X runs upfront, credits stored in balance	Regular users, bulk discount
+Subscription	User pays once for period access (monthly/annual)	Daily users, power users
+In-app credits	App manages its own credit system internally	Complex apps with their own billing
+The concierge billing pattern: An app delegates billing to an autonomous agent. The concierge agent monitors credit levels, generates Lightning invoices automatically when credits run low, and handles top-ups without human intervention. User pays when ready or requests invoice manually.
+This is agent-to-agent commerce in practice — the app agent hires the billing agent, pays from its wallet in sats.
+________________________________________
+Type	Description	Portable	Has UI	Repurposable
+1 — Pure Agent (Portable)	API agent callable anywhere	✅	❌	❌
+2 — Pure Agent (Store Only)	API agent lives on AgentStore only	❌	❌	❌
+3 — AI-Enabled App (Portable)	Full app with own UI, listed for discovery	✅	✅	❌
+4 — AI-Enabled App (Repurposable)	Full app, builder offers custom/white-label	✅	✅	✅
+How AgentStore calls each type:
+•	Type 1 & 2: POST to endpoint_url with {task, user_id} — result shown in modal
+•	Type 3 & 4: Redirect user to endpoint_url after payment — builder's app handles everything
 ________________________________________
 IDENTITY & PROTOCOL STACK
 Layer	Protocol	Status

@@ -1,4 +1,4 @@
-AgentStore UX/UI Document v1.0
+AgentStore UX/UI Document v1.5
 Last updated: March 2026
 ________________________________________
 DESIGN PRINCIPLES
@@ -45,7 +45,7 @@ ________________________________________
 AGENT CARD
 ┌─────────────────────────────────┐
 │ Agent Name          [Research]  │
-│ [Unverified] [⬡ Nostr]          │
+│ [Unverified] [⬡ Nostr] [Type]   │
 │ Short description text here...  │
 │ Rating: 0★ | Completion: 0%     │
 │ 250 SATS (~$0.17)               │
@@ -54,9 +54,14 @@ AGENT CARD
 •	Category badge (colour coded)
 •	Verification badge: Verified ✅ / Reviewed 🔍 / Unverified
 •	Nostr badge: purple ⬡ Nostr (if agent has npub)
+•	Agent type badge: API Agent / App / Repurposable
 •	Short description: 2 lines max, truncated
 •	Price in SATS with USD equivalent
 •	Use Agent button (orange)
+Use Agent behaviour by type:
+•	Type 1 & 2 (Pure Agents): runs agent, shows result in modal
+•	Type 3 (AI-Enabled App): redirects user to the app after payment
+•	Type 4 (Repurposable): redirects to app + shows "Contact Builder" option
 ________________________________________
 AGENT MODAL
 Triggered by "Use Agent" button. Contains:
@@ -112,12 +117,13 @@ Bottom — Transaction History table
 Edit Agent Modal:
 •	Price (SATS)
 •	Category
+•	Agent Type (dropdown: Pure Agent — Portable / Pure Agent — Store Only / AI-Enabled App — Portable / AI-Enabled App — Repurposable)
 •	Short Description
 •	Long Description (textarea)
 •	Endpoint URL
 •	Pricing Notes (optional)
-•	Agent Type (API / Web App / Embedded)
 •	API Key (optional — stored encrypted)
+•	GitHub URL (optional — for code review badge)
 •	Save Changes button
 ________________________________________
 3. Submit Agent (submit.html)
@@ -171,6 +177,33 @@ Badge	Trigger	Style
 🔍 Reviewed	CAUTION code review	Blue
 Unverified	No review	Grey
 ⬡ Nostr	Has nostr_pubkey	Purple
+________________________________________
+PRICING UX
+Builders set their pricing model on the agent listing. Users see pricing clearly before paying.
+Pay per run
+Single Lightning invoice per use. Shown in modal before running.
+Credit packs
+Builder defines pack options — shown in modal:
+┌─────────────────────────────────────┐
+│ Choose a credit pack:               │
+│ ○ 1 run      — 100 sats            │
+│ ○ 10 runs    — 900 sats (10% off)  │
+│ ○ 30 runs    — 2500 sats (17% off) │
+└─────────────────────────────────────┘
+User pays once, credits stored in balance, deducted per run automatically.
+Subscription
+Builder defines subscription options:
+┌─────────────────────────────────────┐
+│ Choose a plan:                      │
+│ ○ Monthly    — 2000 sats/month     │
+│ ○ Annual     — 20000 sats/year     │
+└─────────────────────────────────────┘
+In-app credits (concierge billing)
+App manages credits internally. When credits run low:
+•	Concierge agent generates Lightning invoice automatically
+•	User sees notification: "Your credits are running low"
+•	[Pay Now] or [Request Invoice] options shown
+•	No forced interruption — user pays when ready
 ________________________________________
 PAYMENT UX
 Insufficient balance flow:
