@@ -24,13 +24,6 @@ from agentstore_ledger import credit_balance, get_balance, deduct_balance
 app = FastAPI(title="AgentStore API")
 app.include_router(builder_router)
 
-@app.get("/admin/delete-test-agent")
-def delete_test_agent(db: Session = Depends(get_db)):
-    db.execute(text("DELETE FROM agents WHERE name = 'Test'"))
-    db.commit()
-    result = db.execute(text("SELECT name FROM agents")).fetchall()
-    return {"status": "success", "remaining_agents": [r[0] for r in result]}
-
 @app.post("/agents/{agent_id}/verify")
 async def verify_agent(agent_id: str, request: Request):
     body = await request.json()
