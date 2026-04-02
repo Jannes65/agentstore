@@ -735,12 +735,12 @@
                 const paymentRequest = data.paymentRequest;
                 
                 if (paymentRequest) {
-                    fundInvoiceText.value = paymentRequest;
-                    
-                    // Store recovery info
+                    // Store recovery info immediately
                     localStorage.setItem('pendingInvoiceRef', engineInvoiceRef);
                     localStorage.setItem('pendingUserId', agentId);
                     localStorage.setItem('pendingAmountSats', amount);
+
+                    fundInvoiceText.value = paymentRequest;
 
                     // Generate QR
                     qrcodeContainer.innerHTML = "";
