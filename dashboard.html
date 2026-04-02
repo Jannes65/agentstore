@@ -212,7 +212,7 @@
 
             <div id="fundInvoiceArea" class="hidden space-y-6">
                 <div class="flex justify-center bg-white p-4 rounded-xl">
-                    <div id="fundQRCode"></div>
+                    <div id="qrcode"></div>
                 </div>
                 
                 <div class="relative">
@@ -674,10 +674,10 @@
         const fundInputArea = document.getElementById('fundInputArea');
         const fundInvoiceArea = document.getElementById('fundInvoiceArea');
         const fundSuccessArea = document.getElementById('fundSuccessArea');
-        const fundQRCode = document.getElementById('fundQRCode');
+        const qrcodeContainer = document.getElementById('qrcode');
         const fundInvoiceText = document.getElementById('fundInvoiceText');
 
-        let fundQR = null;
+        let qrcode = null;
         let fundPollInterval = null;
 
         async function fundAgent(agentId, agentName) {
@@ -733,10 +733,15 @@
                     fundInvoiceText.value = data.paymentRequest;
                     
                     // Generate QR
-                    if (!fundQR) {
-                        fundQR = new QRCode(fundQRCode, { width: 200, height: 200 });
-                    }
-                    fundQR.makeCode(data.paymentRequest);
+                    qrcodeContainer.innerHTML = "";
+                    qrcode = new QRCode(qrcodeContainer, {
+                        text: data.paymentRequest.toUpperCase(),
+                        width: 256,
+                        height: 256,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.L
+                    });
                     
                     fundInputArea.classList.add('hidden');
                     fundInvoiceArea.classList.remove('hidden');
