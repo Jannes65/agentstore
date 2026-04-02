@@ -289,6 +289,10 @@
         };
 
         async function loginWithNostr(nsec) {
+            if (typeof window.NostrTools === 'undefined') {
+                alert('Nostr tools are still loading. Please try again in a moment.');
+                return;
+            }
             try {
                 // Decode nsec to get private key hex
                 const { type, data: privkeyHex } = window.NostrTools.nip19.decode(nsec);
