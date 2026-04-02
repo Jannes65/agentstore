@@ -19,16 +19,15 @@ import json
 # ─────────────────────────────────────────────
 
 class Category(str, Enum):
-    PRODUCTIVITY     = "Productivity"
-    DEVELOPER_TOOLS  = "Developer Tools"
-    SALES_CRM        = "Sales & CRM"
-    FINANCE          = "Finance"
-    CUSTOMER_SUPPORT = "Customer Support"
-    RESEARCH         = "Research"
-    DATA_ANALYSIS    = "Data Analysis"
-    CONTENT          = "Content & Writing"
-    HR               = "HR & Recruiting"
-    OTHER            = "Other"
+    research = "Research"
+    productivity = "Productivity"
+    communication = "Communication"
+    social = "Social"
+    developer_tools = "Developer Tools"
+    finance = "Finance"
+    content_writing = "Content & Writing"
+    data_analysis = "Data & Analysis"
+    other = "Other"
 
 
 class Transport(str, Enum):
